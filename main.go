@@ -42,7 +42,8 @@ func reader(conn *websocket.Conn) {
 	}
 }
 
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
+// Websocket for when a user wants to queue
+func matchmakingWs(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	// upgrade this connection to a WebSocket
@@ -52,16 +53,27 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	// helpful log statement to show connections
-	log.Println("Client Connected")
+	//Parameters
+	playerID := r.URL.Query().Get("player_id")
+	if playerID == "" {
+		err := ws.Close()
+		if err != nil {
+			return
+		}
+	}
+
+	log.Printf("User Connected: %s\n", playerID)
 	err = ws.WriteMessage(1, []byte("Connected"))
+	//Add them to the "match making pool"
 
 	reader(ws)
 }
 
+//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
+
 func setupRoutes() {
 	http.HandleFunc("/", homePage)
-	http.HandleFunc("/ws", wsEndpoint)
+	http.HandleFunc("/queue", matchmakingWs)
 }
 
 func main() {
