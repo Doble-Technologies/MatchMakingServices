@@ -1,0 +1,29 @@
+name: Security Scan
+on: [push, pull_request]
+jobs:
+  trivy:
+    runs-on: nas
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            aquasec/trivy:latest fs \
+            --exit-code 1 \
+            --severity HIGH,CRITICAL \
+            /workspace
+      - name: Run Semgrep
+        run: |
+            docker run --rm \
+            -v ${{ github.workspace }}:/src \
+            returntocorp/semgrep semgrep \
+            --config=auto \
+            --error /src
+      - name: Run Gitleaks
+        run: |
+            docker run --rm \
+            -v ${{ github.workspace }}:/repo \
+            zricethezav/gitleaks:latest detect \
+            --source /repo \
+            --exit-code 1
