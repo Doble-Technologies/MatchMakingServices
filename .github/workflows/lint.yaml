@@ -1,0 +1,23 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    if: github.event.pull_request.user.login != 'renovate-bot'
+    runs-on: docker
+    container:
+      image: golang:1.24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b /usr/local/bin latest
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
