@@ -3,7 +3,7 @@ on:
   workflow_dispatch: {}
   pull_request:
     branches:
-      - main
+      - master
     types:
       - opened
       - reopened
@@ -13,7 +13,7 @@ on:
       - '**'
   push:
     branches:
-      - main
+      - master
     paths:
       - '**'
 jobs:
@@ -34,7 +34,7 @@ jobs:
           event=${{ github.event_name }}
           workflow_type='dev';
           workflow_envs='["dev"]'
-          if [[ $event == 'workflow_dispatch' && '${{ github.ref_name }}' == 'main' ]];
+          if [[ $event == 'workflow_dispatch' && '${{ github.ref_name }}' == 'master' ]];
           then
             echo "in if statement"
             workflow_type='release';
