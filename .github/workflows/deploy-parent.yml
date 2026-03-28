@@ -1,0 +1,93 @@
+name: Deploy Parent Container
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:
+      - '**'
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+jobs:
+  determine-workflow:
+    runs-on: 'nas'
+    outputs:
+      workflow_type: ${{ steps.workflow.outputs.workflow_type }}
+      workflow_envs: ${{ steps.workflow.outputs.workflow_envs }}
+      release_type: ${{ steps.workflow.outputs.release_type }}
+      current_version: ${{ steps.version.outputs.current_version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Determine Workflow
+        id: workflow
+        shell: bash
+        run: |
+          event=${{ github.event_name }}
+          workflow_type='dev';
+          workflow_envs='["dev"]'
+          if [[ $event == 'workflow_dispatch' && '${{ github.ref_name }}' == 'main' ]];
+          then
+            echo "in if statement"
+            workflow_type='release';
+            workflow_envs='["prod"]'
+          fi
+
+          echo "workflow_type=$workflow_type" >> $GITHUB_OUTPUT
+          echo "workflow_envs=$workflow_envs" >> $GITHUB_OUTPUT
+
+          echo "Running $workflow_type pipeline in environments: $workflow_envs" >> $GITHUB_STEP_SUMMARY
+      - name: Extract Version
+        id: version
+        shell: bash
+        run: |
+          version=$(jq -r '.version' package.json)
+          echo "current_version=$version" >> "$GITHUB_OUTPUT"
+  nonprod-deploy:
+    needs: determine-workflow
+    if: needs.determine-workflow.outputs.workflow_type != 'release' && false &&github.event.pull_request.user.login != 'renovate-bot'
+    strategy:
+      max-parallel: 1
+      matrix:
+        env: ${{ fromJson(needs.determine-workflow.outputs.workflow_envs) }}
+    uses: ./.github/workflows/deploy-nonprod.yml
+    with:
+      environments: ${{ matrix.env }}
+      workflow_type: ${{ needs.determine-workflow.outputs.workflow_type }}
+      branch: ${{ github.head_ref || github.ref_name }}
+      current_version: ${{ needs.determine-workflow.outputs.current_version }}
+    secrets:
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TEST: ${{ secrets.TEST }}
+    permissions:
+      contents: read
+      packages: write
+  prod-deploy:
+    needs: determine-workflow
+    if: needs.determine-workflow.outputs.workflow_type == 'release'
+    strategy:
+      max-parallel: 1
+      matrix:
+        env: ${{ fromJson(needs.determine-workflow.outputs.workflow_envs) }}
+    uses: ./.github/workflows/deploy-prod.yml
+    with:
+      environments: ${{ matrix.env }}
+      workflow_type: ${{ needs.determine-workflow.outputs.workflow_type }}
+      branch: ${{ github.head_ref || github.ref_name }}
+      current_version: ${{ needs.determine-workflow.outputs.current_version }}
+    secrets:
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TEST: ${{ secrets.TEST }}
+    permissions:
+      contents: read
+      packages: write
