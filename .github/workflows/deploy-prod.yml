@@ -51,7 +51,7 @@ jobs:
       packages: write
     steps:
       - name: Branch Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch }}
       - name: Login to Docker

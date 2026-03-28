@@ -26,7 +26,7 @@ jobs:
       current_version: ${{ steps.version.outputs.current_version }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Determine Workflow
         id: workflow
         shell: bash
