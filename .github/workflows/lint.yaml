@@ -7,7 +7,7 @@ on:
 jobs:
   lint:
     if: github.event.pull_request.user.login != 'renovate-bot'
-    runs-on: docker
+    runs-on: "nas"
     container:
       image: golang:1.24
     steps:
