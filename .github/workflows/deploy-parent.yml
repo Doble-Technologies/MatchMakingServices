@@ -45,12 +45,6 @@ jobs:
           echo "workflow_envs=$workflow_envs" >> $GITHUB_OUTPUT
 
           echo "Running $workflow_type pipeline in environments: $workflow_envs" >> $GITHUB_STEP_SUMMARY
-      - name: Extract Version
-        id: version
-        shell: bash
-        run: |
-          version=$(jq -r '.version' package.json)
-          echo "current_version=$version" >> "$GITHUB_OUTPUT"
   nonprod-deploy:
     needs: determine-workflow
     if: needs.determine-workflow.outputs.workflow_type != 'release' && false &&github.event.pull_request.user.login != 'renovate-bot'

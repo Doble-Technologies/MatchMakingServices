@@ -1,0 +1,32 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Testing Swagger APIs.",
+        "title": "Matchmaking Service",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {},
+        "version": "0.2"
+    },
+    "paths": {
+        "/CreateNotifications": {
+            "post": {
+                "description": "Ingest X Number of Notifications and insert them to notifications db",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create and store notifications",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

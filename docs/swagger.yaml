@@ -1,0 +1,22 @@
+info:
+  contact: {}
+  description: Testing Swagger APIs.
+  termsOfService: http://swagger.io/terms/
+  title: Matchmaking Service
+  version: "0.2"
+paths:
+  /CreateNotifications:
+    post:
+      description: Ingest X Number of Notifications and insert them to notifications
+        db
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create and store notifications
+swagger: "2.0"
