@@ -11,5 +11,5 @@ import (
 // @termsOfService http://swagger.io/terms/
 func main() {
 	fmt.Println("Starting up")
-	server.Start("0.0.0.0:8080")
+	server.Start("0.0.0.0:9333")
 }
