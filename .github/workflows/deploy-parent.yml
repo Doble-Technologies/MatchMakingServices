@@ -46,8 +46,9 @@ jobs:
 
           echo "Running $workflow_type pipeline in environments: $workflow_envs" >> $GITHUB_STEP_SUMMARY
   nonprod-deploy:
+
     needs: determine-workflow
-    if: needs.determine-workflow.outputs.workflow_type != 'release' && false &&github.event.pull_request.user.login != 'renovate-bot'
+    if: needs.determine-workflow.outputs.workflow_type != 'release' &&github.event.pull_request.user.login != 'renovate-bot'
     strategy:
       max-parallel: 1
       matrix:
