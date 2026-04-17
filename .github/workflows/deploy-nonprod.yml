@@ -18,10 +18,6 @@ on:
         type: string
         description: Current Version of the package.json.
         default: '0.0.0'
-    secrets:
-      DOCKERHUB_USER: { required: false }
-      DOCKERHUB_TOKEN: { required: false }
-      TEST: { required: false }
 jobs:
   check-inputs:
     runs-on: 'nas'
