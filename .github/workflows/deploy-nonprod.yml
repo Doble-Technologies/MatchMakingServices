@@ -23,7 +23,7 @@ jobs:
     runs-on: 'nas'
     environment: ${{ inputs.environments }}
     steps:
-      - name: Check secrets present
+      - name: Check secrets present and create env
         run: |
           if [[ -z "${{ secrets.DOCKERHUB_USER }}" ]]; then
             echo "DOCKERHUB_USER secret is empty or missing"
@@ -38,6 +38,13 @@ jobs:
             echo "DOCKERHUB_TOKEN secret is set"
           fi
           echo "Current Version: ${{inputs.current_version}}"
+          
+          touch .env
+          echo DB_URL=${{ secrets.DB_URL }} >> .env
+          echo SECRET=${{ secrets.SECRET }} >> .env
+          echo REFRESH_SECRET=${{ secrets.REFRESH_SECRET }} >> .env
+          cat .env
+
   build:
     needs: check-inputs
     if: needs.check-inputs.result == 'success' && inputs.workflow_type != 'release' && github.actor != 'renovate-bot'

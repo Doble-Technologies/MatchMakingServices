@@ -67,7 +67,7 @@ jobs:
       contents: read
       packages: write
   prod-deploy:
-    runs-on: 'nas'   # add this even though it feels redundant
+    runs-on: 'nas'
     needs: determine-workflow
     if: needs.determine-workflow.outputs.workflow_type == 'release'
     strategy:
