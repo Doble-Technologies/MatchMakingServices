@@ -46,7 +46,7 @@ jobs:
 
           echo "Running $workflow_type pipeline in environments: $workflow_envs" >> $GITHUB_STEP_SUMMARY
   nonprod-deploy:
-
+    runs-on: 'nas'   # add this even though it feels redundant
     needs: determine-workflow
     if: needs.determine-workflow.outputs.workflow_type != 'release' &&github.event.pull_request.user.login != 'renovate-bot'
     strategy:
@@ -67,6 +67,7 @@ jobs:
       contents: read
       packages: write
   prod-deploy:
+    runs-on: 'nas'   # add this even though it feels redundant
     needs: determine-workflow
     if: needs.determine-workflow.outputs.workflow_type == 'release'
     strategy:
