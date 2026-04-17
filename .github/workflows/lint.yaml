@@ -24,27 +24,26 @@ jobs:
 
       - name: Run golangci-lint
         run: golangci-lint run --timeout=1m
-    test:
-      name: Run Tests & Coverage
-      runs-on: "nas"
+  test:
+    name: Run Tests & Coverage
+    runs-on: "nas"
 
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v6
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-        - name: Setup Go
-          uses: actions/setup-go@v6
-          with:
-            go-version: 1.25
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
 
-        - name: Run Tests with Coverage
-          run: |
-            go test -coverprofile=coverage.out ./...
-            go tool cover -func=coverage.out
+      - name: Run Tests with Coverage
+        run: |
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
 
-        - name: Upload Coverage Report
-          uses: codecov/codecov-action@v6
-          with:
-            file: coverage.out
-            flags: unittests
-            fail_ci_if_error: true
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@v6
+        with:
+          flags: unittests
+          fail_ci_if_error: true
