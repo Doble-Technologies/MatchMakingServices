@@ -40,7 +40,7 @@ jobs:
           echo "Current Version: ${{inputs.current_version}}"
   build:
     needs: check-inputs
-    if: needs.check-inputs.result == 'success' && inputs.workflow_type == 'release' && false
+    if: needs.check-inputs.result == 'success' && inputs.workflow_type == 'release'
     environment: ${{ inputs.environments }}
     runs-on: 'nas'
     permissions:
