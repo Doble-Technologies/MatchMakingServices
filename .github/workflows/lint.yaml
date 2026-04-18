@@ -1,49 +1,23 @@
 name: Lint
-
 on:
-  workflow_dispatch: { }
+  workflow_dispatch: {}
   pull_request:
     branches: [master]
-
 jobs:
   lint:
     name: Run golangci-lint
     if: github.event.pull_request.user.login != 'renovate-bot'
-    runs-on: "nas"
+    runs-on: nas
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: 1.25
-
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
       - name: Run golangci-lint
-        run: golangci-lint run --timeout=1m
-#  test:
-#    name: Run Tests & Coverage
-#    runs-on: "nas"
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v6
-#
-#      - name: Setup Go
-#        uses: actions/setup-go@v6
-#        with:
-#          go-version: 1.25
-#
-#      - name: Run Tests with Coverage
-#        run: |
-#          go test -coverprofile=coverage.out ./...
-#          go tool cover -func=coverage.out
-#
-#      - name: Upload Coverage Report
-#        uses: codecov/codecov-action@v6
-#        with:
-#          flags: unittests
-#          fail_ci_if_error: true
+        uses: https://github.com/reviewdog/action-golangci-lint@v2.10
+        env:
+          REVIEWDOG_GITEA_API_TOKEN: ${{ secrets.LINT_TOKEN }}
+          GITEA_ADDRESS: ${{vars.API_ADDRESS}}
+        with:
+          reporter: gitea-pr-review
+          cache: false
+          level: warning
+          golangci_lint_flags: --timeout=1m

@@ -20,8 +20,10 @@ func MatchmakingWs(c *gin.Context) {
 		log.Println("No player_id provided, closing connection")
 		return
 	}
+	log.Println("Sending to Redis Cache, Matchmaking worker will match")
 
 	log.Printf("User Connected: %s\n", playerID)
 	ws.Send(conn, "Connected")
+
 	ws.Read(conn)
 }
