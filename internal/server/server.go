@@ -1,11 +1,17 @@
 package server
 
 import (
+	"context"
 	"log"
 	_ "mm/service/docs"
+	"mm/service/internal/app"
 	"mm/service/internal/handlers"
+	"mm/service/internal/jobs"
 	"mm/service/internal/middleware"
 	"mm/service/pkg/initializer"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,9 +22,13 @@ func init() {
 
 }
 
-func setupRoutes(r *gin.Engine) {
+func setupRoutes(r *gin.Engine, app *app.App) {
+
+	//Setup Redis Handler
+	mmHandler := handlers.NewMMHandler(app.Redis)
+
 	r.GET("/", handlers.HealthCheck)
-	r.GET("/queue", middleware.CheckAuth, handlers.MatchmakingWs)
+	r.GET("/queue", middleware.CheckAuth, mmHandler.MatchmakingWs)
 
 	r.POST("/auth/signup", handlers.CreateUser)
 	r.POST("/auth/login", handlers.Login)
@@ -36,6 +46,26 @@ func setupRoutes(r *gin.Engine) {
 
 func Start(addr string) {
 	r := gin.Default()
-	setupRoutes(r)
+	rdb := initializer.RedisClient()
+
+	goApp := &app.App{
+		Redis: rdb,
+	}
+	//Todo: Rewrite the contex handling, so that the goroutine is properly closed out
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	jm := jobs.NewJobManager(ctx, rdb)
+	jm.RegisterJob(jobs.AlphaMatchJob{}) // Job every 2 minutes
+
+	go jm.StartScheduler()
+
+	setupRoutes(r, goApp)
+
+	go func() {
+		<-ctx.Done()
+		log.Println("Shutting down gracefully...")
+		cancel()
+	}()
 	log.Fatal(r.Run(addr))
 }
