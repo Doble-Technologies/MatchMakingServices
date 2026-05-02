@@ -63,6 +63,8 @@ jobs:
       DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       TEST: ${{ secrets.TEST }}
+      TEAMCITY_URL: ${{ secrets.TEAMCITY_URL }}
+      TEAMCITY_TOKEN: ${{ secrets.TEAMCITY_TOKEN }}
     permissions:
       contents: read
       packages: write
