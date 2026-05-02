@@ -59,7 +59,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Docker Build Backend
-        run: docker build -f Dockerfile -t registry.rcslabs.dev/doble/mm-service:latest ./ --build-arg ENVIRONMENT=dev
+        run: docker build -q -f Dockerfile -t registry.rcslabs.dev/doble/mm-service:latest ./ --build-arg ENVIRONMENT=dev
       - name: Docker Push Backend
         run: docker push registry.rcslabs.dev/doble/mm-service:latest
   deploy:
