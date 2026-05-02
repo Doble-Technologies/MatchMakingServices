@@ -2,6 +2,7 @@ package initializer
 
 import (
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -9,7 +10,12 @@ import (
 func LoadEnvs() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		key := "DB_URL"
+		_, exists := os.LookupEnv(key)
+		if !exists {
+			log.Fatal("Error loading .env file")
+
+		}
 	}
 
 }
