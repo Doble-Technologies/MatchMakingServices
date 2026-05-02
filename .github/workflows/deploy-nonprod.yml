@@ -69,3 +69,19 @@ jobs:
         run: docker build -f Dockerfile -t registry.rcslabs.dev/doble/mm-service:latest ./ --build-arg ENVIRONMENT=dev
       - name: Docker Push Backend
         run: docker push registry.rcslabs.dev/doble/mm-service:latest
+  # deploy:
+  #   needs: build
+  #   if: needs.build.result == 'success' && inputs.workflow_type != 'release'
+  #   environment: ${{ inputs.environments }}
+  #   runs-on: 'ubuntu-latest'
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #     - name: Deploy to Team City
+  #       run: |
+  #         curl -u ${{ secrets.TEAMCITY_USERNAME }}:${{ secrets.TEAMCITY_PASSWORD }} \
+  #              -X POST \
+  #              -H "Content-Type: application/json" \
+  #              -d '{"buildType": {"id": "${{ secrets.TEAMCITY_WEB_ID }}"}}' \
+  #              "${{ secrets.TEAMCITY_URL }}/httpAuth/app/rest/buildQueue" > /dev/null
