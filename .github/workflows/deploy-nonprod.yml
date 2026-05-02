@@ -73,6 +73,7 @@ jobs:
    steps:
      - name: Deploy to Team City
        run: |
+         echo ${{ secrets.TEAMCITY_URL }}
          curl -s -X POST \
            "${{ secrets.TEAMCITY_URL }}/app/rest/buildQueue" \
            -H "Authorization: Bearer ${{ secrets.TEAMCITY_TOKEN }}" \
