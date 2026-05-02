@@ -10,7 +10,6 @@ RUN CGO_ENABLED=0 go build -o /main
 FROM alpine:latest
 
 COPY --from=builder /main /main
-COPY --from=builder /app/.env .env
 
 EXPOSE 9333
 
