@@ -12,7 +12,7 @@ import (
 func GetUserProfile(c *gin.Context) {
 
 	user, _ := c.Get("currentUser")
-
+	
 	c.JSON(200, gin.H{
 		"user": user,
 	})
@@ -21,9 +21,14 @@ func GetUserProfile(c *gin.Context) {
 func GetFriendsListById(c *gin.Context) {
 
 	var id = c.Param("id")
+	var friendsList []models.Friend
+
+	initializer.DB.Where("user_id=?", id).
+		Or("friend_user_id = ?", id).
+		Find(&friendsList)
 
 	c.JSON(200, gin.H{
-		"user": id,
+		"friends": friendsList,
 	})
 }
 
