@@ -51,7 +51,7 @@ func (m AlphaMatchJob) Run(ctx context.Context, rdb *redis.Client) error {
 	}
 
 	if len(elements) < matchSize {
-		log.Println("not enough players to match, skipping")
+		//log.Println("not enough players to match, skipping")
 		return nil
 	}
 	pipe := rdb.Pipeline()

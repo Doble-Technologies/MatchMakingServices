@@ -38,9 +38,10 @@ func (jm *JobManager) StartScheduler() {
 		if _, err := jm.cron.AddFunc(schedule, func() {
 			if err := job.Run(jm.context, jm.rdb); err != nil {
 				log.Printf("Error in job %s: %v", job.Name(), err)
-			} else {
-				log.Printf("Job %s executed successfully", job.Name())
 			}
+			//else {
+			//log.Printf("Job %s executed successfully", job.Name())
+			//}
 		}); err != nil {
 			log.Printf("Failed to schedule job %s: %v", job.Name(), err)
 		}
