@@ -22,6 +22,8 @@ func init() {
 
 }
 
+// TODO: Get Notification based on player id not jks player id
+// Todo: Finish setting up Swagger
 func setupRoutes(r *gin.Engine, app *app.App) {
 
 	//Setup Redis Handler
@@ -37,6 +39,8 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 	r.GET("/user/profile", middleware.CheckAuth, handlers.GetUserProfile)
 	r.GET("/user/notifications", middleware.CheckAuth, handlers.GetNotifications)
 	r.GET("/user/notificationsbyid/:id", middleware.CheckAuth, handlers.GetNotificationsByID)
+	r.GET("/friends/:id", middleware.CheckAuth, handlers.GetFriendsListById)
+	r.GET("/friends/", middleware.CheckAuth, handlers.GetFriendsList)
 
 	r.POST("/generate/notifications", middleware.CheckAuth, handlers.CreateNotifications)
 
@@ -51,7 +55,6 @@ func Start(addr string) {
 	goApp := &app.App{
 		Redis: rdb,
 	}
-	//Todo: Rewrite the contex handling, so that the goroutine is properly closed out
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 

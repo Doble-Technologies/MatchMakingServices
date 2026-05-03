@@ -18,6 +18,26 @@ func GetUserProfile(c *gin.Context) {
 	})
 }
 
+func GetFriendsListById(c *gin.Context) {
+
+	var id = c.Param("id")
+
+	c.JSON(200, gin.H{
+		"user": id,
+	})
+}
+
+func GetFriendsList(c *gin.Context) {
+
+	var id = c.Param("id")
+
+	//user, _ := c.Get("currentUser")
+
+	c.JSON(200, gin.H{
+		"user2": id,
+	})
+}
+
 func GetNotifications(c *gin.Context) {
 	var notifications []models.Notification
 	userInterface, _ := c.Get("currentUser")
@@ -42,9 +62,6 @@ func GetNotificationsByID(c *gin.Context) {
 		"notifications": notifications,
 	})
 }
-
-//TODO: Get Notification based on player id not jks player id
-//Todo: Finish setting up Swagger
 
 // CreateNotifications Post
 // @Summary Create and store notifications

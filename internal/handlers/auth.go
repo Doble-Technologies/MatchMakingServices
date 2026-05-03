@@ -95,6 +95,7 @@ func CreateUser(c *gin.Context) {
 	user := models.User{
 		Username:     authInput.Username,
 		PasswordHash: string(passwordHash),
+		Email:        authInput.Email,
 	}
 
 	initializer.DB.Create(&user)
