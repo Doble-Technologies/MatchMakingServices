@@ -15,22 +15,22 @@ import (
 
 func Login(c *gin.Context) {
 
-	var authInput models.AuthInput
+	var loginInput models.LoginInput
 
-	if err := c.ShouldBindJSON(&authInput); err != nil {
+	if err := c.ShouldBindJSON(&loginInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var userFound models.User
-	initializer.DB.Where("username=?", authInput.Username).Find(&userFound)
+	initializer.DB.Where("username=?", loginInput.Username).Find(&userFound)
 
 	if userFound.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(userFound.PasswordHash), []byte(authInput.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(userFound.PasswordHash), []byte(loginInput.Password)); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid password"})
 		return
 	}
