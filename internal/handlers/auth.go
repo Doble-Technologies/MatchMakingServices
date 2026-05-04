@@ -26,7 +26,6 @@ func Login(c *gin.Context) {
 
 	var userFound models.User
 	initializer.DB.Where("username=?", loginInput.Username).Find(&userFound)
-	log.Println("Second")
 
 	if userFound.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
@@ -66,7 +65,6 @@ func Login(c *gin.Context) {
 	initializer.DB.Create(&refreshSession)
 
 	c.SetCookie("refresh-token", refreshToken, 3600, "/", "localhost", false, true)
-	log.Println("Third")
 
 	c.JSON(200, gin.H{
 		"token": token,
