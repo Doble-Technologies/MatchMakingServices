@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
@@ -12,7 +13,7 @@ import (
 func GetUserProfile(c *gin.Context) {
 
 	user, _ := c.Get("currentUser")
-	
+
 	c.JSON(200, gin.H{
 		"user": user,
 	})
@@ -33,14 +34,85 @@ func GetFriendsListById(c *gin.Context) {
 }
 
 func GetFriendsList(c *gin.Context) {
+	userInterface, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(401, gin.H{"error": "user not found in context"})
+		return
+	}
 
-	var id = c.Param("id")
+	user, ok := userInterface.(models.User)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid user type"})
+		return
+	}
 
-	//user, _ := c.Get("currentUser")
+	var friendsList []models.Friend
+
+	initializer.DB.Where("user_id=?", user.ID).
+		Or("friend_user_id = ?", user.ID).
+		Find(&friendsList)
 
 	c.JSON(200, gin.H{
-		"user2": id,
+		"friends": friendsList,
 	})
+}
+
+func DeleteFriend(c *gin.Context) {
+	userInterface, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(401, gin.H{"error": "user not found in context"})
+		return
+	}
+
+	user, ok := userInterface.(models.User)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid user type"})
+		return
+	}
+
+	var friend models.Friend
+
+	if err := c.ShouldBindJSON(&friend); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if friend.UserID != user.ID && friend.FriendUserID != user.ID {
+		c.JSON(401, gin.H{})
+
+	}
+
+	initializer.DB.Delete(&models.Friend{}, "user_id = ? and friend_user_id = ?", friend.UserID, friend.FriendUserID)
+
+	c.JSON(200, gin.H{})
+}
+func CreateFriend(c *gin.Context) {
+	var friend models.FriendInput
+	if err := c.ShouldBindJSON(&friend); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
+		return
+	}
+	if friend.Status == "" {
+		friend.Status = "pending"
+	}
+	result := initializer.DB.Create(friend)
+	if result.Error != nil {
+		//TODO: Parse error so use cant see details
+		log.Printf("failed to create record %+v: %v\n", friend, result.Error)
+		c.JSON(400, gin.H{"err": fmt.Sprintf("failed to create record %+v: %v", friend, result.Error)})
+	} else {
+		c.JSON(201, gin.H{"result": result})
+	}
+}
+
+func EditFriend(c *gin.Context) {
+	var friend models.FriendInput
+	if err := c.ShouldBindJSON(&friend); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
+		return
+	}
+
+	initializer.DB.Model(models.Friend{}).Where("user_id = ? and friend_user_id = ?", friend.UserID, friend.FriendUserID).Update("status", friend.Status)
+	c.JSON(200, gin.H{"updated": friend.Status})
 }
 
 func GetNotifications(c *gin.Context) {
@@ -77,7 +149,6 @@ func GetNotificationsByID(c *gin.Context) {
 func CreateNotifications(c *gin.Context) {
 	//Notification Inputs
 	var notInputs []models.NotificationInput
-	log.Println("Inside")
 	if err := c.ShouldBindJSON(&notInputs); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return

@@ -28,21 +28,28 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 	//Setup Redis Handler
 	mmHandler := handlers.NewMMHandler(app.Redis)
+	ver1 := r.Group("/api")
+	{
+		ver1.GET("/", handlers.HealthCheck)
+		ver1.GET("/queue", middleware.CheckAuth, mmHandler.MatchmakingWs)
 
-	r.GET("/", handlers.HealthCheck)
-	r.GET("/queue", middleware.CheckAuth, mmHandler.MatchmakingWs)
+		ver1.POST("/auth/signup", handlers.CreateUser)
+		ver1.POST("/auth/login", handlers.Login)
+		ver1.POST("/auth/refresh", middleware.CheckAuth, handlers.AuthRefresh)
 
-	r.POST("/auth/signup", handlers.CreateUser)
-	r.POST("/auth/login", handlers.Login)
-	r.POST("/auth/refresh", middleware.CheckAuth, handlers.AuthRefresh)
+		ver1.GET("/user/profile", middleware.CheckAuth, handlers.GetUserProfile)
 
-	r.GET("/user/profile", middleware.CheckAuth, handlers.GetUserProfile)
-	r.GET("/user/notifications", middleware.CheckAuth, handlers.GetNotifications)
-	r.GET("/user/notificationsbyid/:id", middleware.CheckAuth, handlers.GetNotificationsByID)
-	r.GET("/friends/:id", middleware.CheckAuth, handlers.GetFriendsListById)
-	r.GET("/friends/", middleware.CheckAuth, handlers.GetFriendsList)
+		ver1.GET("/user/notifications", middleware.CheckAuth, handlers.GetNotifications)
+		ver1.GET("/user/notificationsbyid/:id", middleware.CheckAuth, handlers.GetNotificationsByID)
+		ver1.GET("/friends/:id", middleware.CheckAuth, handlers.GetFriendsListById)
+		ver1.GET("/friends/", middleware.CheckAuth, handlers.GetFriendsList)
 
-	r.POST("/generate/notifications", middleware.CheckAuth, handlers.CreateNotifications)
+		ver1.POST("/friends/delete/", middleware.CheckAuth, handlers.DeleteFriend)
+		ver1.PUT("/friends/status/", middleware.CheckAuth, handlers.EditFriend)
+
+		ver1.POST("/generate/friend/", middleware.CheckAuth, handlers.CreateFriend)
+		ver1.POST("/generate/notifications", middleware.CheckAuth, handlers.CreateNotifications)
+	}
 
 	//TODO: Finish Swagger Setup
 	//r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

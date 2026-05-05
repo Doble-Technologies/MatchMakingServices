@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"mm/service/internal/middleware"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
@@ -15,7 +14,6 @@ import (
 )
 
 func Login(c *gin.Context) {
-	log.Println("First")
 
 	var loginInput models.LoginInput
 
