@@ -12,10 +12,16 @@ import (
 
 func GetUserProfile(c *gin.Context) {
 
-	user, _ := c.Get("currentUser")
+	userInterface, _ := c.Get("currentUser")
+	var userDetails models.UserDetail
+
+	var user models.User
+	user, _ = userInterface.(models.User)
+
+	initializer.DB.Where("user_id=?", user.ID).Find(&userDetails)
 
 	c.JSON(200, gin.H{
-		"user": user,
+		"details": userDetails,
 	})
 }
 
