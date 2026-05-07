@@ -6,6 +6,7 @@ import (
 	_ "mm/service/docs"
 	"mm/service/internal/app"
 	"mm/service/internal/handlers"
+	"mm/service/internal/handlers/sse"
 	"mm/service/internal/jobs"
 	"mm/service/internal/middleware"
 	"mm/service/pkg/initializer"
@@ -26,6 +27,7 @@ func init() {
 // Todo: Finish setting up Swagger
 func setupRoutes(r *gin.Engine, app *app.App) {
 
+	ch := make(chan string)
 	//Setup Redis Handler
 	mmHandler := handlers.NewMMHandler(app.Redis)
 	ver1 := r.Group("/api")
@@ -49,6 +51,13 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 		ver1.POST("/generate/friend/", middleware.CheckAuth, handlers.CreateFriend)
 		ver1.POST("/generate/notifications", middleware.CheckAuth, handlers.CreateNotifications)
+
+		ver1.POST("/event-stream", func(c *gin.Context) {
+			sse.HandleEventStreamPost(c, ch)
+		})
+		ver1.GET("/event-stream", func(c *gin.Context) {
+			sse.HandleEventStreamGet(c, ch)
+		})
 	}
 
 	//TODO: Finish Swagger Setup

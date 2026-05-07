@@ -5,6 +5,7 @@ import (
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
 	"net/http"
+	"net/mail"
 	"os"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func validateSingleAddress(value string) error {
+	_, err := mail.ParseAddress(value)
+	return err
+}
 func Login(c *gin.Context) {
 
 	var loginInput models.LoginInput
@@ -92,6 +97,14 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	//re := regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$`)
+
+	_, err = mail.ParseAddress(authInput.Email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Invalid Email": err.Error()})
+		return
+	}
+
 	user := models.User{
 		Username:     authInput.Username,
 		PasswordHash: string(passwordHash),
@@ -99,6 +112,20 @@ func CreateUser(c *gin.Context) {
 	}
 
 	initializer.DB.Create(&user)
+	//Todo check error message
+	if user.ID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Invalid Email/User": ""})
+		return
+
+	}
+
+	userData := models.UserDetail{
+		UserID: user.ID,
+		Xp:     0,
+		Avatar: "",
+		Bio:    "",
+	}
+	initializer.DB.Create(&userData)
 
 	c.JSON(http.StatusOK, gin.H{"data": user})
 
