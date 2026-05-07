@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/mail"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -91,6 +92,12 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	regEx := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,64}$`)
+
+	if !regEx.MatchString(authInput.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{"Invalid Password": ""})
+		return
+	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(authInput.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
