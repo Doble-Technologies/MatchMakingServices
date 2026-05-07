@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"mm/service/internal/models"
+	"mm/service/internal/models/inputs"
 	"mm/service/pkg/initializer"
 	"net/http"
 
@@ -92,7 +93,7 @@ func DeleteFriend(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 func CreateFriend(c *gin.Context) {
-	var friend models.FriendInput
+	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return
@@ -111,7 +112,7 @@ func CreateFriend(c *gin.Context) {
 }
 
 func EditFriend(c *gin.Context) {
-	var friend models.FriendInput
+	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return
@@ -154,7 +155,7 @@ func GetNotificationsByID(c *gin.Context) {
 // @Router /generate/CreateNotifications [post]
 func CreateNotifications(c *gin.Context) {
 	//Notification Inputs
-	var notInputs []models.NotificationInput
+	var notInputs []inputs.NotificationInput
 	if err := c.ShouldBindJSON(&notInputs); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return

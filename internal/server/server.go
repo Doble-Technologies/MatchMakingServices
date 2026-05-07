@@ -7,12 +7,14 @@ import (
 	"mm/service/internal/app"
 	"mm/service/internal/handlers"
 	"mm/service/internal/handlers/sse"
+	"mm/service/internal/handlers/view"
 	"mm/service/internal/jobs"
 	"mm/service/internal/middleware"
 	"mm/service/pkg/initializer"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +22,6 @@ import (
 func init() {
 	initializer.LoadEnvs()
 	initializer.ConnectDB()
-
 }
 
 // TODO: Get Notification based on player id not jks player id
@@ -30,6 +31,9 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 	ch := make(chan string)
 	//Setup Redis Handler
 	mmHandler := handlers.NewMMHandler(app.Redis)
+	limiter := middleware.NewIPRateLimiter(10, 20, 2*time.Minute)
+
+	r.Use(middleware.RateLimiter(limiter))
 	ver1 := r.Group("/api")
 	{
 		ver1.GET("/", handlers.HealthCheck)
@@ -58,6 +62,9 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.GET("/event-stream", func(c *gin.Context) {
 			sse.HandleEventStreamGet(c, ch)
 		})
+
+		//Below are public views
+		ver1.GET("/view/recent/users", view.GetLatestUsers)
 	}
 
 	//TODO: Finish Swagger Setup
