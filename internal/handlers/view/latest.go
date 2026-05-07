@@ -11,7 +11,7 @@ import (
 
 // Public facing needs to be more secure than ones requiring login
 func GetLatestUsers(c *gin.Context) {
-	var users []models.User
+	var users []models.UserDetail
 	result := initializer.DB.Table("user_details").Order("created_at desc").Limit(5).Find(&users)
 	//Todo: create custom view objects based on a few tables aggregated data
 	if result.Error != nil {
