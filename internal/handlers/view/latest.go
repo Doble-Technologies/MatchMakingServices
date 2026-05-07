@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Public facing needs to be more secure than ones requiring login
 func GetLatestUsers(c *gin.Context) {
 	var users []models.User
 	result := initializer.DB.Table("user_details").Order("created_at desc").Limit(5).Find(&users)
