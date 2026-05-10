@@ -132,7 +132,11 @@ func UploadAvatarAndSave(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not read uploaded file"})
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Printf("close uploaded file error: %v", closeErr)
+		}
+	}()
 
 	key, err := makeObjectKey("avatars", user.ID, fileHeader.Filename)
 	if err != nil {
