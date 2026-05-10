@@ -58,6 +58,10 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.GET("/event-stream", func(c *gin.Context) {
 			sse.HandleEventStreamGet(c, ch)
 		})
+
+		ver1.POST("/upload-file", middleware.CheckAuth, handlers.GenerateFileUploadURL) // generic direct-to-bucket upload URL (for anything not just avatar).
+		ver1.POST("/users/avatar/upload", middleware.CheckAuth, handlers.UploadAvatarAndSave) // Front End will use this.
+		ver1.PUT("/users/avatar", middleware.CheckAuth, handlers.SetAvatarURL) // sets with a link (need link first).
 	}
 
 	//TODO: Finish Swagger Setup
