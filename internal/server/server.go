@@ -65,6 +65,9 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 		//Below are public views
 		ver1.GET("/view/recent/users", view.GetLatestUsers)
+		ver1.POST("/upload-file", middleware.CheckAuth, handlers.GenerateFileUploadURL) // generic direct-to-bucket upload URL (for anything not just avatar).
+		ver1.POST("/users/avatar/upload", middleware.CheckAuth, handlers.UploadAvatarAndSave) // Front End will use this.
+		ver1.PUT("/users/avatar", middleware.CheckAuth, handlers.SetAvatarURL) // sets with a link (need link first).
 	}
 
 	//TODO: Finish Swagger Setup
