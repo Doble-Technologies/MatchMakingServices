@@ -24,6 +24,7 @@ import (
 type presignRequest struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"contentType"`
+	Bucket      string `json:"bucket"`
 }
 
 type presignResponse struct {
@@ -38,9 +39,11 @@ type errorResponse struct {
 var (
 	minioOnce    sync.Once
 	minioClient  *minio.Client
-	minioBucket  string
 	minioBaseURL string
 	minioInitErr error
+
+	defaultUploadBucket = "matchmaking"
+	avatarUploadBucket  = "matchmaking-avatar"
 
 	allowedTypes = map[string]struct{}{
 		"image/jpeg": {},
@@ -50,7 +53,7 @@ var (
 )
 
 func GenerateFileUploadURL(c *gin.Context) {
-	client, bucket, publicBase, err := getMinioClient()
+	client, publicBase, err := getMinioClient()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
@@ -65,6 +68,11 @@ func GenerateFileUploadURL(c *gin.Context) {
 	if req.Filename == "" || req.ContentType == "" {
 		c.JSON(http.StatusBadRequest, errorResponse{Error: "filename and contentType are required"})
 		return
+	}
+
+	bucket := strings.TrimSpace(req.Bucket)
+	if bucket == "" {
+		bucket = defaultUploadBucket
 	}
 
 	user, err := getCurrentUser(c)
@@ -94,7 +102,7 @@ func GenerateFileUploadURL(c *gin.Context) {
 }
 
 func UploadAvatarAndSave(c *gin.Context) {
-	client, bucket, publicBase, err := getMinioClient()
+	client, publicBase, err := getMinioClient()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
@@ -144,7 +152,7 @@ func UploadAvatarAndSave(c *gin.Context) {
 		return
 	}
 
-	_, err = client.PutObject(context.Background(), bucket, key, file, fileHeader.Size, minio.PutObjectOptions{ContentType: contentType})
+	_, err = client.PutObject(context.Background(), avatarUploadBucket, key, file, fileHeader.Size, minio.PutObjectOptions{ContentType: contentType})
 	if err != nil {
 		log.Printf("upload error: %v", err)
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not upload avatar"})
@@ -197,7 +205,7 @@ func getCurrentUser(c *gin.Context) (models.User, error) {
 	return user, nil
 }
 
-func getMinioClient() (*minio.Client, string, string, error) {
+func getMinioClient() (*minio.Client, string, error) {
 	minioOnce.Do(func() {
 		endpoint, err := requiredEnv("MINIO_ENDPOINT")
 		if err != nil {
@@ -212,12 +220,6 @@ func getMinioClient() (*minio.Client, string, string, error) {
 		}
 
 		secretKey, err := requiredEnv("MINIO_SECRET_KEY")
-		if err != nil {
-			minioInitErr = err
-			return
-		}
-
-		bucket, err := requiredEnv("MINIO_BUCKET")
 		if err != nil {
 			minioInitErr = err
 			return
@@ -240,11 +242,10 @@ func getMinioClient() (*minio.Client, string, string, error) {
 		}
 
 		minioClient = client
-		minioBucket = bucket
 		minioBaseURL = publicBase
 	})
 
-	return minioClient, minioBucket, minioBaseURL, minioInitErr
+	return minioClient, minioBaseURL, minioInitErr
 }
 
 func requiredEnv(key string) (string, error) {
