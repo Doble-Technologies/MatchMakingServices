@@ -21,6 +21,9 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// TODO: Rewrite this file, to use minio client that is registeed once on init rather than by endpoint
+// Move the structs maybe to a new folder/file?
+// util functions can stay outside of load ENV want to use in other files
 type presignRequest struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"contentType"`
