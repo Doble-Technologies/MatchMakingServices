@@ -47,15 +47,19 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 		ver1.GET("/user/notifications", middleware.CheckAuth, handlers.GetNotifications)
 		ver1.GET("/user/notificationsbyid/:id", middleware.CheckAuth, handlers.GetNotificationsByID)
+
+		//Todo: Fix This
 		ver1.GET("/friends/:id", middleware.CheckAuth, handlers.GetFriendsListById)
 		ver1.GET("/friends/", middleware.CheckAuth, handlers.GetFriendsList)
 
+		//todo: protect this
 		ver1.POST("/friends/delete/", middleware.CheckAuth, handlers.DeleteFriend)
 		ver1.PUT("/friends/status/", middleware.CheckAuth, handlers.EditFriend)
 
 		ver1.POST("/generate/friend/", middleware.CheckAuth, handlers.CreateFriend)
 		ver1.POST("/generate/notifications", middleware.CheckAuth, handlers.CreateNotifications)
 
+		//TODO: Finish SSE Events
 		ver1.POST("/event-stream", func(c *gin.Context) {
 			sse.HandleEventStreamPost(c, ch)
 		})
@@ -65,9 +69,11 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 		//Below are public views
 		ver1.GET("/view/recent/users", view.GetLatestUsers)
-		ver1.POST("/upload-file", middleware.CheckAuth, handlers.GenerateFileUploadURL) // generic direct-to-bucket upload URL (for anything not just avatar).
+		ver1.GET("/view/friendslist/:id", view.GetFriendsListById)
+		//S3
+		ver1.POST("/upload-file", middleware.CheckAuth, handlers.GenerateFileUploadURL)       // generic direct-to-bucket upload URL (for anything not just avatar).
 		ver1.POST("/users/avatar/upload", middleware.CheckAuth, handlers.UploadAvatarAndSave) // Front End will use this.
-		ver1.PUT("/users/avatar", middleware.CheckAuth, handlers.SetAvatarURL) // sets with a link (need link first).
+		ver1.PUT("/users/avatar", middleware.CheckAuth, handlers.SetAvatarURL)                // sets with a link (need link first).
 	}
 
 	//TODO: Finish Swagger Setup

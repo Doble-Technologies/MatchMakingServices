@@ -38,11 +38,6 @@ func GetLatestUsers(c *gin.Context) {
 		})
 		return
 	}
-	//Build the user view from here
-	//for _, v := range users {
-	//temp:
-	//	initializer.DB.Select()
-	//}
 
 	c.JSON(http.StatusOK, gin.H{
 		"users": userView,
@@ -50,7 +45,6 @@ func GetLatestUsers(c *gin.Context) {
 }
 
 func GetFriendsListById(c *gin.Context) {
-	var friends []models.Friend
 	var friendList []views.FriendDetail
 	var id = c.Param("id")
 	regEx := regexp.MustCompile(`^\d+$`)
@@ -60,10 +54,13 @@ func GetFriendsListById(c *gin.Context) {
 		return
 	}
 
-	result := initializer.DB.
-		Where("(user_id = ? OR friend_user_id = ?) AND status = ?", id, id, "accepted").
-		Find(&friends).Error
-
+	result := initializer.DB.Table("users u").
+		Select("u.id as user_id, u.username as user_name").
+		Joins("JOIN friends f ON u.id = CASE WHEN f.user_id = ? THEN f.friend_user_id ELSE f.user_id END", id).
+		Where("? IN (f.user_id, f.friend_user_id)", id).
+		Where("status = 'accepted'").
+		Scan(&friendList)
+	log.Printf("%v", friendList)
 	if result.Error != nil {
 		log.Printf("Database error: %v\n", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -72,19 +69,7 @@ func GetFriendsListById(c *gin.Context) {
 		return
 	}
 
-	//var friendIds []int
-
-	//Iterate through friends and build friend details
-	//for _, v := range friends {
-	//	if v.UserID != 11 {
-	//		append(friendIds, 11)
-	//
-	//	} else if v.FriendUserID != 11 {
-	//		append(friendIds, 11)
-	//	}
-	//}
-
 	c.JSON(http.StatusOK, gin.H{
-		"friendsList": friendList,
+		"friends_list": friendList,
 	})
 }
