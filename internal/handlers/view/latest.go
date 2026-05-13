@@ -11,10 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Public facing needs to be more secure than ones requiring login
+// GetLatestUsers Public facing needs to be more secure than ones requiring login
 func GetLatestUsers(c *gin.Context) {
-	var users []models.UserDetail
-	result := initializer.DB.Table("user_details").Order("created_at desc").Limit(5).Find(&users)
+	var userView []views.UserView
+
+	result := initializer.DB.Table("user_details ud").
+		Select("ud.user_id, u.username, ud.xp, ud.avatar, ud.bio").
+		Joins("JOIN users u ON u.id = ud.user_id").
+		Order("ud.created_at DESC").
+		Limit(5).
+		Scan(&userView)
+
 	//Todo: create custom view objects based on a few tables aggregated data
 	if result.Error != nil {
 		log.Printf("Database error: %v\n", result.Error)
@@ -27,16 +34,23 @@ func GetLatestUsers(c *gin.Context) {
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "No users found",
-			"users":   []models.User{},
+			"users":   []models.UserDetail{},
 		})
 		return
 	}
+	//Build the user view from here
+	//for _, v := range users {
+	//temp:
+	//	initializer.DB.Select()
+	//}
+
 	c.JSON(http.StatusOK, gin.H{
-		"users": users,
+		"users": userView,
 	})
 }
 
 func GetFriendsListById(c *gin.Context) {
+	var friends []models.Friend
 	var friendList []views.FriendDetail
 	var id = c.Param("id")
 	regEx := regexp.MustCompile(`^\d+$`)
@@ -47,11 +61,9 @@ func GetFriendsListById(c *gin.Context) {
 	}
 
 	result := initializer.DB.
-		Table("friends AS f").
-		Select("f.*, user_details.*").
-		Joins("INNER JOIN user_details ON f.user_id = user_details.user_id").
-		Where("(f.user_id = ? OR f.friend_user_id = ?) AND f.status = ?", id, id, "accepted").
-		Scan(&friendList).Error
+		Where("(user_id = ? OR friend_user_id = ?) AND status = ?", id, id, "accepted").
+		Find(&friends).Error
+
 	if result.Error != nil {
 		log.Printf("Database error: %v\n", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -59,8 +71,20 @@ func GetFriendsListById(c *gin.Context) {
 		})
 		return
 	}
-	
+
+	//var friendIds []int
+
+	//Iterate through friends and build friend details
+	//for _, v := range friends {
+	//	if v.UserID != 11 {
+	//		append(friendIds, 11)
+	//
+	//	} else if v.FriendUserID != 11 {
+	//		append(friendIds, 11)
+	//	}
+	//}
+
 	c.JSON(http.StatusOK, gin.H{
-		"users": friendList,
+		"friendsList": friendList,
 	})
 }
