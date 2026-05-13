@@ -55,7 +55,7 @@ func GetFriendsListById(c *gin.Context) {
 	}
 
 	result := initializer.DB.Table("users u").
-		Select("u.id as user_id, u.username as user_name").
+		Select("u.id as user_id, u.username as username").
 		Joins("JOIN friends f ON u.id = CASE WHEN f.user_id = ? THEN f.friend_user_id ELSE f.user_id END", id).
 		Where("? IN (f.user_id, f.friend_user_id)", id).
 		Where("status = 'accepted'").
