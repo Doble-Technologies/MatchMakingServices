@@ -265,10 +265,16 @@ func getGarageClient() (*s3.Client, string, error) {
 			endpoint = scheme + "://" + endpoint
 		}
 
+		// Garage is configured with a specific region name. Default to "garage"
+		// but allow override in case the instance is configured differently.
+		region := os.Getenv("GARAGE_REGION")
+		if region == "" {
+			region = "garage"
+		}
+
 		cfg, err := awsconfig.LoadDefaultConfig(
 			context.Background(),
-			// Garage ignores the region but the SDK requires a non-empty value.
-			awsconfig.WithRegion("garage"),
+			awsconfig.WithRegion(region),
 			awsconfig.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
 			),
@@ -283,6 +289,13 @@ func getGarageClient() (*s3.Client, string, error) {
 			// Garage does not support virtual-hosted–style bucket addressing;
 			// path-style (e.g. http://host/bucket/key) must be used.
 			o.UsePathStyle = true
+			// AWS SDK v2 ≥ ~1.30 appends a CRC32 trailing checksum to PutObject
+			// by default. Garage does not support these trailers, and their
+			// presence alters what gets signed, producing a 403 "Invalid
+			// signature". Restricting to WhenRequired disables the automatic
+			// checksum, keeping the request body exactly what was signed.
+			o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+			o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
 		})
 		garageBaseURL = publicBase
 	})
