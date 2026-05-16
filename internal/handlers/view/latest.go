@@ -22,7 +22,6 @@ func GetLatestUsers(c *gin.Context) {
 		Limit(5).
 		Scan(&userView)
 
-	//Todo: create custom view objects based on a few tables aggregated data
 	if result.Error != nil {
 		log.Printf("Database error: %v\n", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{

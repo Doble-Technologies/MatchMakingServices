@@ -15,15 +15,18 @@ import (
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// TODO: Rewrite this file, to use minio client that is registeed once on init rather than by endpoint
-// Move the structs maybe to a new folder/file?
-// util functions can stay outside of load ENV want to use in other files
+// TODO: Rewrite this file to use the S3 client registered once on init rather than by endpoint.
+// Move structs to a new folder/file?
+// Util functions can stay outside of loadEnv; want to use in other files.
+
 type presignRequest struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"contentType"`
@@ -40,10 +43,10 @@ type errorResponse struct {
 }
 
 var (
-	minioOnce    sync.Once
-	minioClient  *minio.Client
-	minioBaseURL string
-	minioInitErr error
+	garageOnce    sync.Once
+	garageClient  *s3.Client
+	garageBaseURL string
+	garageInitErr error
 
 	defaultUploadBucket = "matchmaking"
 	avatarUploadBucket  = "matchmaking-avatar"
@@ -56,7 +59,7 @@ var (
 )
 
 func GenerateFileUploadURL(c *gin.Context) {
-	client, publicBase, err := getMinioClient()
+	client, publicBase, err := getGarageClient()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
@@ -90,7 +93,15 @@ func GenerateFileUploadURL(c *gin.Context) {
 		return
 	}
 
-	presignedURL, err := client.PresignedPutObject(context.Background(), bucket, key, 60*time.Second)
+	presignClient := s3.NewPresignClient(client)
+	presignResult, err := presignClient.PresignPutObject(
+		context.Background(),
+		&s3.PutObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		},
+		s3.WithPresignExpires(60*time.Second),
+	)
 	if err != nil {
 		log.Printf("presign error: %v", err)
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not generate upload URL"})
@@ -99,13 +110,13 @@ func GenerateFileUploadURL(c *gin.Context) {
 
 	fileURL := buildPublicURL(publicBase, key)
 	c.JSON(http.StatusOK, presignResponse{
-		PresignedURL: presignedURL.String(),
+		PresignedURL: presignResult.URL,
 		PublicURL:    fileURL,
 	})
 }
 
 func UploadAvatarAndSave(c *gin.Context) {
-	client, publicBase, err := getMinioClient()
+	client, publicBase, err := getGarageClient()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
@@ -155,7 +166,13 @@ func UploadAvatarAndSave(c *gin.Context) {
 		return
 	}
 
-	_, err = client.PutObject(context.Background(), avatarUploadBucket, key, file, fileHeader.Size, minio.PutObjectOptions{ContentType: contentType})
+	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:        aws.String(avatarUploadBucket),
+		Key:           aws.String(key),
+		Body:          file,
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(fileHeader.Size),
+	})
 	if err != nil {
 		log.Printf("upload error: %v", err)
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not upload avatar"})
@@ -208,47 +225,69 @@ func getCurrentUser(c *gin.Context) (models.User, error) {
 	return user, nil
 }
 
-func getMinioClient() (*minio.Client, string, error) {
-	minioOnce.Do(func() {
-		endpoint, err := requiredEnv("MINIO_ENDPOINT")
+// getGarageClient returns a singleton S3 client pointed at a Garage instance.
+// Garage is S3-compatible but requires path-style addressing and ignores the
+// region value; we pass "garage" as a harmless placeholder.
+func getGarageClient() (*s3.Client, string, error) {
+	garageOnce.Do(func() {
+		endpoint, err := requiredEnv("GARAGE_ENDPOINT")
 		if err != nil {
-			minioInitErr = err
+			garageInitErr = err
 			return
 		}
 
-		accessKey, err := requiredEnv("MINIO_ACCESS_KEY")
+		accessKey, err := requiredEnv("GARAGE_ACCESS_KEY")
 		if err != nil {
-			minioInitErr = err
+			garageInitErr = err
 			return
 		}
 
-		secretKey, err := requiredEnv("MINIO_SECRET_KEY")
+		secretKey, err := requiredEnv("GARAGE_SECRET_KEY")
 		if err != nil {
-			minioInitErr = err
+			garageInitErr = err
 			return
 		}
 
-		publicBase, err := requiredEnv("MINIO_PUBLIC_BASE")
+		publicBase, err := requiredEnv("GARAGE_PUBLIC_BASE")
 		if err != nil {
-			minioInitErr = err
+			garageInitErr = err
 			return
 		}
 
-		useSSL := os.Getenv("MINIO_USE_SSL") != "false"
-		client, err := minio.New(endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-			Secure: useSSL,
+		// Build a fully-qualified endpoint URL. GARAGE_USE_SSL defaults to true;
+		// set it to "false" explicitly to disable (e.g. in local dev).
+		useSSL := os.Getenv("GARAGE_USE_SSL") != "false"
+		scheme := "https"
+		if !useSSL {
+			scheme = "http"
+		}
+		if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+			endpoint = scheme + "://" + endpoint
+		}
+
+		cfg, err := awsconfig.LoadDefaultConfig(
+			context.Background(),
+			// Garage ignores the region but the SDK requires a non-empty value.
+			awsconfig.WithRegion("garage"),
+			awsconfig.WithCredentialsProvider(
+				credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+			),
+		)
+		if err != nil {
+			garageInitErr = fmt.Errorf("failed to load S3 config: %w", err)
+			return
+		}
+
+		garageClient = s3.NewFromConfig(cfg, func(o *s3.Options) {
+			o.BaseEndpoint = aws.String(endpoint)
+			// Garage does not support virtual-hosted–style bucket addressing;
+			// path-style (e.g. http://host/bucket/key) must be used.
+			o.UsePathStyle = true
 		})
-		if err != nil {
-			minioInitErr = fmt.Errorf("failed to init MinIO client: %w", err)
-			return
-		}
-
-		minioClient = client
-		minioBaseURL = publicBase
+		garageBaseURL = publicBase
 	})
 
-	return minioClient, minioBaseURL, minioInitErr
+	return garageClient, garageBaseURL, garageInitErr
 }
 
 func requiredEnv(key string) (string, error) {
@@ -264,11 +303,10 @@ func makeObjectKey(prefix string, userID uint64, filename string) (string, error
 	if ext == "" {
 		return "", fmt.Errorf("filename must include an extension")
 	}
-
 	return fmt.Sprintf("%s/%d/%s%s", prefix, userID, uuid.NewString(), ext), nil
 }
 
-func buildPublicURL(publicBase string, key string) string {
+func buildPublicURL(publicBase, key string) string {
 	return strings.TrimRight(publicBase, "/") + "/" + key
 }
 
