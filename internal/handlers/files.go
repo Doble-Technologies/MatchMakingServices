@@ -1,331 +1,108 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"mime"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
-	"mm/service/internal/models"
-	"mm/service/pkg/initializer"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
-// TODO: Rewrite this file to use the S3 client registered once on init rather than by endpoint.
-// Move structs to a new folder/file?
-// Util functions can stay outside of loadEnv; want to use in other files.
-
-type presignRequest struct {
-	Filename    string `json:"filename"`
-	ContentType string `json:"contentType"`
-	Bucket      string `json:"bucket"`
-}
-
-type presignResponse struct {
-	PresignedURL string `json:"presignedUrl"`
-	PublicURL    string `json:"publicUrl"`
-}
-
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
-var (
-	garageOnce    sync.Once
-	garageClient  *s3.Client
-	garageBaseURL string
-	garageInitErr error
-
-	defaultUploadBucket = "matchmaking"
-	avatarUploadBucket  = "matchmaking-avatar"
-
-	allowedTypes = map[string]struct{}{
-		"image/jpeg": {},
-		"image/png":  {},
-		"image/gif":  {},
-	}
+const (
+	bucket       = "matchmaking"
+	maxImageSize = 10 << 20 // 10 MB
 )
 
-func GenerateFileUploadURL(c *gin.Context) {
-	client, publicBase, err := getGarageClient()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
-		return
-	}
-
-	var req presignRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid request body"})
-		return
-	}
-
-	if req.Filename == "" || req.ContentType == "" {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "filename and contentType are required"})
-		return
-	}
-
-	bucket := strings.TrimSpace(req.Bucket)
-	if bucket == "" {
-		bucket = defaultUploadBucket
-	}
-
-	user, err := getCurrentUser(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, errorResponse{Error: err.Error()})
-		return
-	}
-
-	key, err := makeObjectKey("uploads", user.ID, req.Filename)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: err.Error()})
-		return
-	}
-
-	presignClient := s3.NewPresignClient(client)
-	presignResult, err := presignClient.PresignPutObject(
-		context.Background(),
-		&s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		},
-		s3.WithPresignExpires(60*time.Second),
-	)
-	if err != nil {
-		log.Printf("presign error: %v", err)
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not generate upload URL"})
-		return
-	}
-
-	fileURL := buildPublicURL(publicBase, key)
-	c.JSON(http.StatusOK, presignResponse{
-		PresignedURL: presignResult.URL,
-		PublicURL:    fileURL,
-	})
+// allowedMIMETypes maps permitted content types to their canonical extension.
+var allowedMIMETypes = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/webp": ".webp",
+	"image/gif":  ".gif",
 }
 
-func UploadAvatarAndSave(c *gin.Context) {
-	client, publicBase, err := getGarageClient()
+type ImageUploadHandler struct {
+	s3 *s3.Client
+}
+
+func NewImageUploadHandler(s3Client *s3.Client) *ImageUploadHandler {
+	return &ImageUploadHandler{s3: s3Client}
+}
+
+// UploadImage handles multipart image uploads to the Garage "matchmaking" bucket.
+// POST /upload/image
+// Form field: "image" (file)
+func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
+	// 1. Parse and size-limit the multipart form.
+	if err := c.Request.ParseMultipartForm(maxImageSize); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request too large or not multipart"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing 'image' field"})
+		return
+	}
+	defer file.Close()
+
+	// 2. Validate MIME type from the Content-Type header on the part.
+	contentType := header.Header.Get("Content-Type")
+	if _, ok := allowedMIMETypes[contentType]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{
+			"error":   "unsupported image type",
+			"allowed": keys(allowedMIMETypes),
+		})
 		return
 	}
 
-	user, err := getCurrentUser(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, errorResponse{Error: err.Error()})
-		return
-	}
+	// 3. Build a collision-resistant object key.
+	ext := allowedMIMETypes[contentType]
+	originalName := strings.TrimSuffix(filepath.Base(header.Filename), filepath.Ext(header.Filename))
+	key := fmt.Sprintf("images/%d_%s%s", time.Now().UnixNano(), sanitise(originalName), ext)
 
-	fileHeader, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "file is required (multipart field 'file')"})
-		return
-	}
-
-	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	if ext == "" {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "filename must include an extension"})
-		return
-	}
-
-	contentType := fileHeader.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = mime.TypeByExtension(ext)
-	}
-	if _, ok := allowedTypes[contentType]; !ok {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: fmt.Sprintf("unsupported content type: %s", contentType)})
-		return
-	}
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not read uploaded file"})
-		return
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			log.Printf("close uploaded file error: %v", closeErr)
-		}
-	}()
-
-	key, err := makeObjectKey("avatars", user.ID, fileHeader.Filename)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: err.Error()})
-		return
-	}
-
-	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket:        aws.String(avatarUploadBucket),
+	// 4. Stream directly to Garage — no local temp file needed.
+	_, err = h.s3.PutObject(c.Request.Context(), &s3.PutObjectInput{
+		Bucket:        aws.String(bucket),
 		Key:           aws.String(key),
 		Body:          file,
 		ContentType:   aws.String(contentType),
-		ContentLength: aws.Int64(fileHeader.Size),
+		ContentLength: aws.Int64(header.Size),
 	})
 	if err != nil {
-		log.Printf("upload error: %v", err)
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not upload avatar"})
+		log.Printf("%s", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload image"})
 		return
 	}
 
-	avatarURL := buildPublicURL(publicBase, key)
-	if err := updateUserAvatarURL(user.ID, avatarURL); err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "avatar uploaded but failed to save profile"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"publicUrl": avatarURL})
-}
-
-func SetAvatarURL(c *gin.Context) {
-	user, err := getCurrentUser(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, errorResponse{Error: err.Error()})
-		return
-	}
-
-	var body struct {
-		AvatarURL string `json:"avatarUrl"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil || body.AvatarURL == "" {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "avatarUrl is required"})
-		return
-	}
-
-	if err := updateUserAvatarURL(user.ID, body.AvatarURL); err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "could not save avatar"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"avatarUrl": body.AvatarURL})
-}
-
-func getCurrentUser(c *gin.Context) (models.User, error) {
-	userValue, exists := c.Get("currentUser")
-	if !exists {
-		return models.User{}, fmt.Errorf("user not found in context")
-	}
-
-	user, ok := userValue.(models.User)
-	if !ok {
-		return models.User{}, fmt.Errorf("invalid user type")
-	}
-
-	return user, nil
-}
-
-// getGarageClient returns a singleton S3 client pointed at a Garage instance.
-// Garage is S3-compatible but requires path-style addressing and ignores the
-// region value; we pass "garage" as a harmless placeholder.
-func getGarageClient() (*s3.Client, string, error) {
-	garageOnce.Do(func() {
-		endpoint, err := requiredEnv("GARAGE_ENDPOINT")
-		if err != nil {
-			garageInitErr = err
-			return
-		}
-
-		accessKey, err := requiredEnv("GARAGE_ACCESS_KEY")
-		if err != nil {
-			garageInitErr = err
-			return
-		}
-
-		secretKey, err := requiredEnv("GARAGE_SECRET_KEY")
-		if err != nil {
-			garageInitErr = err
-			return
-		}
-
-		publicBase, err := requiredEnv("GARAGE_PUBLIC_BASE")
-		if err != nil {
-			garageInitErr = err
-			return
-		}
-
-		// Build a fully-qualified endpoint URL. GARAGE_USE_SSL defaults to true;
-		// set it to "false" explicitly to disable (e.g. in local dev).
-		useSSL := os.Getenv("GARAGE_USE_SSL") != "false"
-		scheme := "https"
-		if !useSSL {
-			scheme = "http"
-		}
-		if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
-			endpoint = scheme + "://" + endpoint
-		}
-
-		// Garage is configured with a specific region name. Default to "garage"
-		// but allow override in case the instance is configured differently.
-		region := os.Getenv("GARAGE_REGION")
-		if region == "" {
-			region = "garage"
-		}
-
-		cfg, err := awsconfig.LoadDefaultConfig(
-			context.Background(),
-			awsconfig.WithRegion(region),
-			awsconfig.WithCredentialsProvider(
-				credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
-			),
-		)
-		if err != nil {
-			garageInitErr = fmt.Errorf("failed to load S3 config: %w", err)
-			return
-		}
-
-		garageClient = s3.NewFromConfig(cfg, func(o *s3.Options) {
-			o.BaseEndpoint = aws.String(endpoint)
-			// Garage does not support virtual-hosted–style bucket addressing;
-			// path-style (e.g. http://host/bucket/key) must be used.
-			o.UsePathStyle = true
-			// AWS SDK v2 ≥ ~1.30 appends a CRC32 trailing checksum to PutObject
-			// by default. Garage does not support these trailers, and their
-			// presence alters what gets signed, producing a 403 "Invalid
-			// signature". Restricting to WhenRequired disables the automatic
-			// checksum, keeping the request body exactly what was signed.
-			o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
-			o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
-		})
-		garageBaseURL = publicBase
+	c.JSON(http.StatusCreated, gin.H{
+		"key":  key,
+		"size": header.Size,
 	})
-
-	return garageClient, garageBaseURL, garageInitErr
 }
 
-func requiredEnv(key string) (string, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return "", fmt.Errorf("missing required env var: %s", key)
+// sanitise strips characters that are awkward in S3 object keys.
+func sanitise(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('_')
+		}
 	}
-	return value, nil
+	return b.String()
 }
 
-func makeObjectKey(prefix string, userID uint64, filename string) (string, error) {
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
-		return "", fmt.Errorf("filename must include an extension")
+func keys(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
 	}
-	return fmt.Sprintf("%s/%d/%s%s", prefix, userID, uuid.NewString(), ext), nil
-}
-
-func buildPublicURL(publicBase, key string) string {
-	return strings.TrimRight(publicBase, "/") + "/" + key
-}
-
-func updateUserAvatarURL(userID uint64, avatarURL string) error {
-	result := initializer.DB.Model(&models.UserDetail{}).
-		Where("user_id = ?", userID).
-		Update("avatar", avatarURL)
-	return result.Error
+	return out
 }

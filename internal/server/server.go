@@ -11,6 +11,7 @@ import (
 	"mm/service/internal/jobs"
 	"mm/service/internal/middleware"
 	"mm/service/pkg/initializer"
+	"mm/service/pkg/s3"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,6 +32,18 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 	ch := make(chan string)
 	//Setup Redis Handler
 	mmHandler := handlers.NewMMHandler(app.Redis)
+	s3Client, err := s3.NewGarageClient(
+		os.Getenv("GARAGE_ENDPOINT"), // e.g. "http://localhost:3900"
+		os.Getenv("GARAGE_ACCESS_KEY"),
+		os.Getenv("GARAGE_SECRET_KEY"),
+		"garage", // any non-empty string works as the region
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	uploadHandler := handlers.NewImageUploadHandler(s3Client)
+
 	limiter := middleware.NewIPRateLimiter(10, 20, 2*time.Minute)
 
 	r.Use(middleware.RateLimiter(limiter))
@@ -70,10 +83,9 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		//Below are public views
 		ver1.GET("/view/recent/users", view.GetLatestUsers)
 		ver1.GET("/view/friendslist/:id", view.GetFriendsListById)
-		//S3
-		ver1.POST("/upload-file", middleware.CheckAuth, handlers.GenerateFileUploadURL)       // generic direct-to-bucket upload URL (for anything not just avatar).
-		ver1.POST("/users/avatar/upload", middleware.CheckAuth, handlers.UploadAvatarAndSave) // Front End will use this.
-		ver1.PUT("/users/avatar", middleware.CheckAuth, handlers.SetAvatarURL)                // sets with a link (need link first).
+
+		ver1.POST("/users/avatar/upload", uploadHandler.UploadImage)
+
 	}
 
 	//TODO: Finish Swagger Setup

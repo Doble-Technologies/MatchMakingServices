@@ -16,12 +16,9 @@ func RedisClient() *redis.Client {
 		Password: os.Getenv("REDIS_PASS"), // set if you configured AUTH
 		DB:       0,                       // default DB
 	})
-	pong, err := rdb.Ping(ctx).Result()
+	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
 		log.Fatalf("Could not connect to Redis: %v", err)
 	}
-
-	log.Println("Redis ping:", pong)
-
 	return rdb
 }
