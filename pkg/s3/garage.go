@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 type debugTransport struct {
@@ -37,7 +39,9 @@ func NewGarageClient(endpoint, accessKeyID, secretAccessKey, region string) (*s3
 			credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
 		),
 		config.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
-	)
+		config.WithHTTPClient(&http.Client{
+			Transport: &debugTransport{wrapped: http.DefaultTransport},
+		}))
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +49,22 @@ func NewGarageClient(endpoint, accessKeyID, secretAccessKey, region string) (*s3
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(endpoint)
 		o.UsePathStyle = true
+		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+			return stack.Finalize.Insert(
+				middleware.FinalizeMiddlewareFunc("StripSDKHeaders",
+					func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
+						if req, ok := in.Request.(*smithyhttp.Request); ok {
+							req.Header.Del("Amz-Sdk-Invocation-Id")
+							req.Header.Del("Amz-Sdk-Request")
+							req.Header.Del("Accept-Encoding")
+						}
+						return next.HandleFinalize(ctx, in)
+					},
+				),
+				"Signing",
+				middleware.Before,
+			)
+		})
 	})
 
 	return client, nil
