@@ -36,10 +36,7 @@ func NewGarageClient(endpoint, accessKeyID, secretAccessKey, region string) (*s3
 		config.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
 		),
-		// Attach the debug transport here
-		config.WithHTTPClient(&http.Client{
-			Transport: &debugTransport{wrapped: http.DefaultTransport},
-		}),
+		config.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
 	)
 	if err != nil {
 		return nil, err
