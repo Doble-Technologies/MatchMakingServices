@@ -50,7 +50,7 @@ func NewGarageClient(endpoint, accessKeyID, secretAccessKey, region string) (*s3
 		o.BaseEndpoint = aws.String(endpoint)
 		o.UsePathStyle = true
 		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-			return stack.Finalize.Insert(
+			insertErr := stack.Finalize.Insert(
 				middleware.FinalizeMiddlewareFunc("StripSDKHeaders",
 					func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
 						if req, ok := in.Request.(*smithyhttp.Request); ok {
@@ -64,6 +64,9 @@ func NewGarageClient(endpoint, accessKeyID, secretAccessKey, region string) (*s3
 				"Signing",
 				middleware.Before,
 			)
+			// Presign client uses a different stack without "Signing" — safe to ignore
+			_ = insertErr
+			return nil
 		})
 	})
 

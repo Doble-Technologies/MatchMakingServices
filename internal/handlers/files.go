@@ -80,9 +80,45 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 		return
 	}
 
+	// Generate presigned URL valid for 7 days
+	presignClient := s3.NewPresignClient(h.s3)
+	presigned, err := presignClient.PresignGetObject(c.Request.Context(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(7*24*time.Hour))
+	if err != nil {
+		log.Printf("%v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "upload succeeded but failed to generate URL"})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"key":  key,
-		"size": header.Size,
+		"key": key,
+		"url": presigned.URL,
+	})
+}
+
+// GET /images/url?key=images/xxx.png
+func (h *ImageUploadHandler) GetImageURL(c *gin.Context) {
+	key := c.Query("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing key"})
+		return
+	}
+
+	presignClient := s3.NewPresignClient(h.s3)
+	presigned, err := presignClient.PresignGetObject(c.Request.Context(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(7*24*time.Hour))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate URL"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"key": key,
+		"url": presigned.URL,
 	})
 }
 

@@ -85,6 +85,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.GET("/view/friendslist/:id", view.GetFriendsListById)
 
 		ver1.POST("/users/avatar/upload", uploadHandler.UploadImage)
+		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
 
 	}
 
