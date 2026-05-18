@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AI GENERATED + TUTORIAL, NEEDS REVIEW FOR FINAL
 const (
 	bucket       = "matchmaking"
 	maxImageSize = 10 << 20 // 10 MB
@@ -26,6 +27,23 @@ var allowedMIMETypes = map[string]string{
 	"image/gif":  ".gif",
 }
 
+// ImageUploadResponse is the successful response body for image upload and URL retrieval.
+type ImageUploadResponse struct {
+	Key string `json:"key" example:"images/1234567890_photo.jpg"`
+	URL string `json:"url" example:"https://s3.example.com/matchmaking/images/1234567890_photo.jpg?X-Amz-Signature=..."`
+}
+
+// ErrorResponse is the standard error response body.
+type ErrorResponse struct {
+	Error string `json:"error" example:"missing 'image' field"`
+}
+
+// UnsupportedMediaTypeResponse is returned when the uploaded file's MIME type is not allowed.
+type UnsupportedMediaTypeResponse struct {
+	Error   string   `json:"error"   example:"unsupported image type"`
+	Allowed []string `json:"allowed" example:"image/jpeg,image/png,image/webp,image/gif"`
+}
+
 type ImageUploadHandler struct {
 	s3 *s3.Client
 }
@@ -34,9 +52,21 @@ func NewImageUploadHandler(s3Client *s3.Client) *ImageUploadHandler {
 	return &ImageUploadHandler{s3: s3Client}
 }
 
-// UploadImage handles multipart image uploads to the Garage "matchmaking" bucket.
-// POST /upload/image
-// Form field: "image" (file)
+// UploadImage godoc
+//
+//	@Summary		Upload an image
+//	@Description	Accepts a multipart/form-data request containing a single image file,
+//	@Description	validates its MIME type, stores it in the "matchmaking" S3 bucket under
+//	@Description	the images/ prefix, and returns a 7-day presigned GET URL.
+//	@Tags			images
+//	@Accept			mpfd
+//	@Produce		json
+//	@Param			image	formData	file					true	"Image file to upload (JPEG, PNG, WebP, or GIF; max 10 MB)"
+//	@Success		201		{object}	ImageUploadResponse		"Upload successful — presigned URL valid for 7 days"
+//	@Failure		400		{object}	ErrorResponse			"Request too large, not multipart, or missing the 'image' field"
+//	@Failure		415		{object}	UnsupportedMediaTypeResponse	"MIME type not allowed"
+//	@Failure		500		{object}	ErrorResponse			"S3 upload failed or presign failed"
+//	@Router			/upload/image [post]
 func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 	// 1. Parse and size-limit the multipart form.
 	if err := c.Request.ParseMultipartForm(maxImageSize); err != nil {
@@ -98,7 +128,18 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 	})
 }
 
-// GET /images/url?key=images/xxx.png
+// GetImageURL godoc
+//
+//	@Summary		Get a presigned image URL
+//	@Description	Given an existing S3 object key, generates and returns a 7-day presigned
+//	@Description	GET URL for the corresponding object in the "matchmaking" bucket.
+//	@Tags			images
+//	@Produce		json
+//	@Param			key	query		string				true	"S3 object key"	example(images/1234567890_photo.jpg)
+//	@Success		201	{object}	ImageUploadResponse	"Presigned URL generated successfully"
+//	@Failure		400	{object}	ErrorResponse		"Missing key query parameter"
+//	@Failure		500	{object}	ErrorResponse		"Failed to generate presigned URL"
+//	@Router			/images/url [get]
 func (h *ImageUploadHandler) GetImageURL(c *gin.Context) {
 	key := c.Query("key")
 	if key == "" {
