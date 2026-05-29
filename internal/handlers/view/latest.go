@@ -40,9 +40,10 @@ func GetLatestUsers(c *gin.Context, h *handlers.ImageUploadHandler) {
 	}
 
 	//update avatar url here
-	for _, user := range userView {
-		user.Avatar = handlers.GenerateUrl(user.Avatar, c, h)
+	for ind, _ := range userView {
+		userView[ind].Avatar = handlers.GenerateUrl(userView[ind].Avatar, c, h)
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"users": userView,
 	})
