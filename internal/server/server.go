@@ -81,8 +81,11 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		})
 
 		//Below are public views
-		ver1.GET("/view/recent/users", view.GetLatestUsers)
+
 		ver1.GET("/view/friendslist/:id", view.GetFriendsListById)
+		ver1.GET("/view/latest/users", func(c *gin.Context) {
+			view.GetLatestUsers(c, uploadHandler)
+		})
 
 		ver1.POST("/users/avatar/upload", uploadHandler.UploadImage)
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)

@@ -152,21 +152,29 @@ func (h *ImageUploadHandler) GetImageURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing key"})
 		return
 	}
+	//Passing in the handles and contex
+	var url = GenerateUrl(key, c, h)
+	if url == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate URL"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"key": key,
+		"url": url,
+	})
+}
 
+func GenerateUrl(key string, c *gin.Context, h *ImageUploadHandler) string {
 	presignClient := s3.NewPresignClient(h.s3)
 	presigned, err := presignClient.PresignGetObject(c.Request.Context(), &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	}, s3.WithPresignExpires(7*24*time.Hour))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate URL"})
-		return
+		log.Printf("Failed to generate URL: %v", err)
+		return ""
 	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"key": key,
-		"url": presigned.URL,
-	})
+	return presigned.URL
 }
 
 // sanitise strips characters that are awkward in S3 object keys.

@@ -2,6 +2,7 @@ package view
 
 import (
 	"log"
+	"mm/service/internal/handlers"
 	"mm/service/internal/models"
 	"mm/service/internal/models/views"
 	"mm/service/pkg/initializer"
@@ -12,7 +13,7 @@ import (
 )
 
 // GetLatestUsers Public facing needs to be more secure than ones requiring login
-func GetLatestUsers(c *gin.Context) {
+func GetLatestUsers(c *gin.Context, h *handlers.ImageUploadHandler) {
 	var userView []views.UserView
 
 	result := initializer.DB.Table("user_details ud").
@@ -38,6 +39,10 @@ func GetLatestUsers(c *gin.Context) {
 		return
 	}
 
+	//update avatar url here
+	for _, user := range userView {
+		user.Avatar = handlers.GenerateUrl(user.Avatar, c, h)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"users": userView,
 	})
