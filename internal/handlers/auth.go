@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/mail"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
