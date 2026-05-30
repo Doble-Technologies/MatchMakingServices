@@ -17,7 +17,7 @@ func GetLatestUsers(c *gin.Context, h *handlers.ImageUploadHandler) {
 	var userView []views.UserView
 
 	result := initializer.DB.Table("user_details ud").
-		Select("ud.user_id, u.username, ud.xp, ud.avatar, ud.bio").
+		Select("ud.user_id, u.username, ud.xp, ud.avatar, ud.bio, u.created_at").
 		Joins("JOIN users u ON u.id = ud.user_id").
 		Order("ud.created_at DESC").
 		Limit(5).

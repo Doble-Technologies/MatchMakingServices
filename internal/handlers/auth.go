@@ -129,7 +129,7 @@ func CreateUser(c *gin.Context) {
 	userData := models.UserDetail{
 		UserID: user.ID,
 		Xp:     0,
-		Avatar: "",
+		Avatar: "images/1780015344232921334_square-pug.jpg", //Default Pug Avatar
 		Bio:    "",
 	}
 	initializer.DB.Create(&userData)
