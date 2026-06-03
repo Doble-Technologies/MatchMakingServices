@@ -5,29 +5,41 @@ import (
 	"log"
 	"mm/service/internal/models"
 	"mm/service/internal/models/inputs"
+	"mm/service/internal/models/views"
 	"mm/service/pkg/initializer"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetUserProfile(c *gin.Context) {
+func GetUserProfile(c *gin.Context, h *ImageUploadHandler) {
+	var userProfile views.UserProfile
+	userInterface, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(401, gin.H{"error": "user not found in context"})
+		return
+	}
+	user, _ := userInterface.(models.User)
 
-	userInterface, _ := c.Get("currentUser")
-	var userDetails models.UserDetail
+	log.Printf("%v", user.ID)
+	result := initializer.DB.Table("user_details ud").
+		Select("u.id, u.username, ud.xp, ud.avatar, ud.bio, u.email, u.created_at").
+		Where("? = u.id", user.ID).
+		Joins("JOIN users u ON u.id = ud.user_id").
+		Scan(&userProfile)
+	if result.Error != nil {
+		log.Printf("%v", result)
+		c.JSON(500, gin.H{"error": "user error"})
+		return
+	}
 
-	var user models.User
-	user, _ = userInterface.(models.User)
-
-	initializer.DB.Where("user_id=?", user.ID).Find(&userDetails)
-
+	userProfile.Avatar = GenerateUrl(userProfile.Avatar, c, h)
 	c.JSON(200, gin.H{
-		"details": userDetails,
+		"profile": userProfile,
 	})
 }
 
 func GetFriendsListById(c *gin.Context) {
-
 	var id = c.Param("id")
 	var friendsList []models.Friend
 
