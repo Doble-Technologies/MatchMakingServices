@@ -60,6 +60,10 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 			handlers.GetUserProfile(c, uploadHandler)
 		})
 
+		ver1.GET("/user/profile/:username", func(c *gin.Context) {
+			handlers.GetUserProfileByUser(c, uploadHandler)
+		})
+
 		ver1.GET("/user/notifications", middleware.CheckAuth, handlers.GetNotifications)
 		ver1.GET("/user/notificationsbyid/:id", middleware.CheckAuth, handlers.GetNotificationsByID)
 

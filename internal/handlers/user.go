@@ -39,6 +39,31 @@ func GetUserProfile(c *gin.Context, h *ImageUploadHandler) {
 	})
 }
 
+func GetUserProfileByUser(c *gin.Context, h *ImageUploadHandler) {
+	var userProfile views.UserProfile
+	var username = c.Param("username")
+	result := initializer.DB.Table("user_details ud").
+		Select("ud.user_id, u.username, ud.xp, ud.avatar, ud.bio, u.email, u.created_at").
+		Where("? = u.username", username).
+		Joins("JOIN users u ON u.id = ud.user_id").
+		Scan(&userProfile)
+	if result.Error != nil {
+		log.Printf("%v", result)
+		c.JSON(500, gin.H{"error": "user error"})
+		return
+	}
+	if userProfile.UserID == 0 {
+		c.JSON(404, gin.H{"error": "user not found"})
+		return
+	}
+
+	userProfile.Avatar = GenerateUrl(userProfile.Avatar, c, h)
+	c.JSON(200, gin.H{
+		"profile": userProfile,
+	})
+
+}
+
 func GetFriendsListById(c *gin.Context) {
 	var id = c.Param("id")
 	var friendsList []models.Friend
@@ -151,6 +176,11 @@ func GetNotifications(c *gin.Context) {
 func GetNotificationsByID(c *gin.Context) {
 	var notifications []models.Notification
 	var id = c.Param("id")
+
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"err": "missing id"})
+		return
+	}
 
 	initializer.DB.Where("user_id=?", id).Find(&notifications)
 
