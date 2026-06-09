@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"mime/multipart"
+	"mm/service/internal/models"
+	"mm/service/pkg/initializer"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -69,6 +71,14 @@ func NewImageUploadHandler(s3Client *s3.Client) *ImageUploadHandler {
 //	@Failure		500		{object}	ErrorResponse			"S3 upload failed or presign failed"
 //	@Router			/upload/image [post]
 func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
+	//Valid Token
+	userInterface, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(401, gin.H{"error": "user not found in context"})
+		return
+	}
+	user, _ := userInterface.(models.User)
+
 	// 1. Parse and size-limit the multipart form.
 	if err := c.Request.ParseMultipartForm(maxImageSize); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "request too large or not multipart"})
@@ -115,6 +125,11 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload image"})
 		return
 	}
+
+	//Update database
+	initializer.DB.Table("user_details ud").
+		Update("avatar", aws.String(key)).
+		Where("? = ud.user_id", user.ID)
 
 	// Generate presigned URL valid for 7 days
 	presignClient := s3.NewPresignClient(h.s3)

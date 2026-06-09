@@ -93,7 +93,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 			view.GetLatestUsers(c, uploadHandler)
 		})
 
-		ver1.POST("/users/avatar/upload", uploadHandler.UploadImage)
+		ver1.POST("/users/avatar/upload", middleware.CheckAuth, uploadHandler.UploadImage)
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
 
 	}
