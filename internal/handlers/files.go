@@ -126,6 +126,7 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 		return
 	}
 
+	log.Printf("%v", user)
 	//Update database
 	initializer.DB.Table("user_details ud").
 		Update("avatar", aws.String(key)).
