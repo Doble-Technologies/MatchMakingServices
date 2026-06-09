@@ -125,12 +125,10 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload image"})
 		return
 	}
-	log.Printf("HERE WE GO")
-	log.Printf("%v", user)
 	//Update database
-	initializer.DB.Table("user_details ud").
-		Update("avatar", aws.String(key)).
-		Where("? = ud.user_id", user.ID)
+	initializer.DB.Table("user_details").
+		Where("? = user_id", user.ID).
+		Update("avatar", aws.String(key))
 
 	// Generate presigned URL valid for 7 days
 	presignClient := s3.NewPresignClient(h.s3)
