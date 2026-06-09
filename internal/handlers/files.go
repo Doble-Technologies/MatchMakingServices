@@ -125,7 +125,7 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload image"})
 		return
 	}
-
+	log.Printf("HERE WE GO")
 	log.Printf("%v", user)
 	//Update database
 	initializer.DB.Table("user_details ud").
