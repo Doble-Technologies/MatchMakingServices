@@ -93,7 +93,7 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
-
+			log.Println(err)
 		}
 	}(file)
 
