@@ -121,7 +121,7 @@ func Start(addr string) {
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down gracefully...")
+		log.Println("Shutting down gracefully..")
 		cancel()
 	}()
 	log.Fatal(r.Run(addr))
