@@ -114,7 +114,7 @@ func Start(addr string) {
 
 	jm := jobs.NewJobManager(ctx, rdb)
 	jm.RegisterJob(jobs.AlphaMatchJob{}) // Job every 2 minutes
-
+	jm.RegisterJob(jobs.PatchNotesJob{})
 	go jm.StartScheduler()
 
 	setupRoutes(r, goApp)
