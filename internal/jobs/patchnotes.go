@@ -4,14 +4,15 @@ package jobs
 //Just will form groups based on # of players and timestamp. will essentially ignore elo rating at start
 import (
 	"context"
+	"fmt"
 	"log"
-	"math/rand"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
-	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm/clause"
@@ -25,7 +26,7 @@ func (m PatchNotesJob) Name() string {
 }
 
 func (m PatchNotesJob) Schedule() string {
-	return "0 * * * 2" // Runs every 10 seconds
+	return "0 0 * * * 2" // Runs every 10 seconds
 }
 
 func scrapeRiot(e *colly.HTMLElement) {
@@ -50,60 +51,63 @@ func scrapeRiot(e *colly.HTMLElement) {
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
 
 }
+
+func scrapeLolPatches(e *colly.HTMLElement) {
+
+}
+
 func (m PatchNotesJob) Run(ctx context.Context, _ *redis.Client) error {
 	select {
 	case <-ctx.Done():
 		os.Exit(0) // Main thread is done
 	default:
 	}
-	userAgents := []string{
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-	}
+
 	baseUrl := "https://www.leagueoflegends.com/"
+	c := initializer.SetupColly()
 
-	c := colly.NewCollector()
-	c.WithTransport(&http.Transport{
-		DisableKeepAlives: false,
-	})
-
-	rateErr := c.Limit(&colly.LimitRule{ //Rate limit to avoid issues
-		DomainGlob:  "*",
-		RandomDelay: 3 * time.Second,
-		Parallelism: 1,
-	})
-	if rateErr != nil {
-		log.Fatal(rateErr)
-	}
-	c.SetRequestTimeout(30 * time.Second)
-	c.OnRequest(func(r *colly.Request) {
-		ua := userAgents[rand.Intn(len(userAgents))]
-		r.Headers.Set("User-Agent", ua)
-		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-		r.Headers.Set("Accept", "text/html,application/xhtml+xml")
-	})
-	c.OnRequest(func(r *colly.Request) {
-		log.Printf("Scraping: %s", r.URL)
-	})
-	c.OnResponse(func(r *colly.Response) {
-		log.Printf("Status: %v", r.StatusCode)
-	})
-
-	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
-	})
 	//Parse HTML
 	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`, scrapeRiot)
+	//Fetch pending links
+	//execute new func
 
-	//GET
-	//TODO: Promote to CONST
+	//EXECUTE
 	grabErr := c.Visit(baseUrl + "en-us/news/tags/patch-notes/")
+
 	if grabErr != nil {
 		return grabErr
 	}
 
-	//STORE
+	log.Print("TRIGGERED JOHNNY BOY")
+	c.OnHTML("div#patch-notes-container div.patch-change-block", func(e *colly.HTMLElement) {
+		champion := strings.TrimSpace(e.ChildText("h3.change-title"))
+		if champion == "" {
+			return // skip non-champion blocks
+		}
+
+		fmt.Printf("\n=== %s ===\n", champion)
+
+		// context paragraph
+		summary := strings.TrimSpace(e.ChildText("blockquote.blockquote.context p"))
+		if summary != "" {
+			fmt.Println("Context:", summary)
+		}
+
+		// walk each ability / stat section
+		e.ForEach("h4.change-detail-title", func(_ int, h *colly.HTMLElement) {
+			title := strings.TrimSpace(h.Text)
+			fmt.Printf("  %s\n", title)
+
+			// the <ul> right after the h4 holds the changes
+			h.DOM.NextAllFiltered("ul").First().Find("li").Each(func(_ int, li *goquery.Selection) {
+				fmt.Printf("    - %s\n", strings.TrimSpace(li.Text()))
+			})
+		})
+	})
+	fileURL := "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-10-notes/"
+	if err := c.Visit(fileURL); err != nil {
+		log.Fatal(err)
+	}
 
 	return nil
 }
