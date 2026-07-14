@@ -96,7 +96,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.POST("/users/avatar/upload", middleware.CheckAuth, uploadHandler.UploadImage)
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
 		//Patchnotes
-		ver1.GET("/view/latest/patchotes", view.GetPatchNotes)
+		ver1.GET("/view/latest/patchnotes", view.GetPatchNotes)
 
 	}
 	//
