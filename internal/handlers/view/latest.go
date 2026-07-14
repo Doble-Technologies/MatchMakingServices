@@ -91,3 +91,15 @@ func GetPatchNotes(c *gin.Context) {
 		"patch_notes": patchNotes,
 	})
 }
+
+func GetRiotNews(c *gin.Context) {
+	var riotNews []models.RiotNews
+
+	_ = initializer.DB.Table("riot_news news").
+		Select("*").
+		Scan(&riotNews)
+
+	c.JSON(http.StatusOK, gin.H{
+		"riot_news": riotNews,
+	})
+}

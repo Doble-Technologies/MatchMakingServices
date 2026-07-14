@@ -97,6 +97,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
 		//Patchnotes
 		ver1.GET("/view/latest/patchnotes", view.GetPatchNotes)
+		ver1.GET("/view/latest/patches", view.GetRiotNews)
 
 	}
 	//
