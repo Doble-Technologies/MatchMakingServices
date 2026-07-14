@@ -97,7 +97,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
 
 	}
-
+	//
 	//TODO: Finish Swagger Setup
 	//r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 }
