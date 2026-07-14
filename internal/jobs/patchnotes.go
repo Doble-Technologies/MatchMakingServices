@@ -29,7 +29,8 @@ func (m PatchNotesJob) Schedule() string {
 	return "0 0 * * * 2" // Runs every 10 seconds
 }
 
-func scrapeRiot(e *colly.HTMLElement) {
+// []string
+func scrapeRiotPatch(e *colly.HTMLElement) {
 	baseUrl := "https://www.leagueoflegends.com/"
 	// href attribute
 	href := e.Attr("href")
@@ -49,11 +50,87 @@ func scrapeRiot(e *colly.HTMLElement) {
 		CreatedAt:   time.Time{},
 	}
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
-
+	//return []string{"Hello", "World", "!"}
 }
 
 func scrapeLolPatches(e *colly.HTMLElement) {
+	//Change Title
+	title := strings.TrimSpace(e.ChildText("h3.change-title"))
+	if title == "" {
+		return // skip non-title blocks
+	}
 
+	//Title
+	//Summary
+	//change detail
+
+	fmt.Printf("\n=== %s ===\n", title)
+
+	// context paragraph
+	summary := strings.TrimSpace(e.ChildText("blockquote.blockquote.context p"))
+	if summary != "" {
+		fmt.Println("Context:", summary)
+	}
+
+	details := ""
+	// walk each ability / stat section
+	e.ForEach("h4.change-detail-title", func(_ int, h *colly.HTMLElement) {
+		title := strings.TrimSpace(h.Text)
+		fmt.Printf("  %s\n", title)
+		details += title
+
+		// the <ul> right after the h4 holds the changes
+		h.DOM.NextAllFiltered("ul").First().Find("li").Each(func(_ int, li *goquery.Selection) {
+			fmt.Printf("    - %s\n", strings.TrimSpace(li.Text()))
+			details += li.Text()
+		})
+	})
+
+	//Creat dto of title, summary, and append the change detail into 1
+
+	patchNote := models.LeaguePatchNote{
+		NewsID:       178, //Determine this
+		Title:        &title,
+		Summary:      &summary,
+		ChangeDetail: &details,
+	}
+	//save patch note
+
+	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&patchNote)
+
+}
+
+func ScrapeRiot() error {
+	baseUrl := "https://www.leagueoflegends.com/"
+	c := initializer.SetupColly()
+
+	//Parse HTML
+	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`, scrapeRiotPatch)
+	//Fetch pending links
+	//execute new func
+
+	//EXECUTE and return valid urls
+	grabErr := c.Visit(baseUrl + "en-us/news/tags/patch-notes/")
+
+	if grabErr != nil {
+		return grabErr
+	}
+
+	c.OnHTML("div#patch-notes-container div.patch-change-block", func(e *colly.HTMLElement) {
+		//pass urlList
+		scrapeLolPatches(e)
+	})
+
+	var validPatchNotes = [128]string{"https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-13-notes/"}
+
+	for _, fileURL := range validPatchNotes {
+		if err := c.Visit(fileURL); err != nil {
+			log.Fatal(err)
+		}
+	}
+	//For loop of all valids urls + pass the id
+
+	return nil
 }
 
 func (m PatchNotesJob) Run(ctx context.Context, _ *redis.Client) error {
@@ -63,50 +140,9 @@ func (m PatchNotesJob) Run(ctx context.Context, _ *redis.Client) error {
 	default:
 	}
 
-	baseUrl := "https://www.leagueoflegends.com/"
-	c := initializer.SetupColly()
-
-	//Parse HTML
-	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`, scrapeRiot)
-	//Fetch pending links
-	//execute new func
-
-	//EXECUTE
-	grabErr := c.Visit(baseUrl + "en-us/news/tags/patch-notes/")
-
-	if grabErr != nil {
-		return grabErr
-	}
-
-	log.Print("TRIGGERED JOHNNY BOY")
-	c.OnHTML("div#patch-notes-container div.patch-change-block", func(e *colly.HTMLElement) {
-		champion := strings.TrimSpace(e.ChildText("h3.change-title"))
-		if champion == "" {
-			return // skip non-champion blocks
-		}
-
-		fmt.Printf("\n=== %s ===\n", champion)
-
-		// context paragraph
-		summary := strings.TrimSpace(e.ChildText("blockquote.blockquote.context p"))
-		if summary != "" {
-			fmt.Println("Context:", summary)
-		}
-
-		// walk each ability / stat section
-		e.ForEach("h4.change-detail-title", func(_ int, h *colly.HTMLElement) {
-			title := strings.TrimSpace(h.Text)
-			fmt.Printf("  %s\n", title)
-
-			// the <ul> right after the h4 holds the changes
-			h.DOM.NextAllFiltered("ul").First().Find("li").Each(func(_ int, li *goquery.Selection) {
-				fmt.Printf("    - %s\n", strings.TrimSpace(li.Text()))
-			})
-		})
-	})
-	fileURL := "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-10-notes/"
-	if err := c.Visit(fileURL); err != nil {
-		log.Fatal(err)
+	err := ScrapeRiot() //Wrapped all logic in a function call primarily to enable easy testing
+	if err != nil {
+		return err
 	}
 
 	return nil

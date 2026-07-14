@@ -78,3 +78,16 @@ func GetFriendsListById(c *gin.Context) {
 		"friends_list": friendList,
 	})
 }
+
+func GetPatchNotes(c *gin.Context) {
+	var patchNotes []models.LeaguePatchNote
+
+	_ = initializer.DB.Table("league_patch_note notes").
+		Select("*").
+		Where("news_id = 178").
+		Scan(&patchNotes)
+
+	c.JSON(http.StatusOK, gin.H{
+		"patch_notes": patchNotes,
+	})
+}
