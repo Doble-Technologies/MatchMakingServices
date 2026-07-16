@@ -40,6 +40,9 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 	category := e.ChildText(`[data-testid="card-category"]`)
 	// date
 	dateValue := e.ChildText(`[data-testid="card-date"]`)
+
+	imageURL := e.ChildAttr(`img[data-testid="mediaImage"]`, "src")
+
 	layout := "2006-01-02T15:04:05.000Z"
 	date, _ := time.Parse(layout, dateValue)
 	newsCategory := models.RiotNews{
@@ -48,6 +51,7 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 		PublishedAt: date,
 		Link:        baseUrl + href,
 		CreatedAt:   time.Time{},
+		ImageUrl:    imageURL,
 	}
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
 	//return []string{"Hello", "World", "!"}

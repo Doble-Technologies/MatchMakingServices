@@ -9,6 +9,7 @@ type RiotNews struct {
 	PublishedAt time.Time `gorm:"column:published_at;not null" json:"publishedAt"`
 	Link        string    `gorm:"column:link;type:text;uniqueIndex;not null" json:"link"`
 	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime" json:"createdAt"`
+	ImageUrl    string    `gorm:"column:image_url;type:varchar("`
 }
 
 // TableName overrides the default pluralization.
