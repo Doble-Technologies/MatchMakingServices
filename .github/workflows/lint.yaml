@@ -10,7 +10,7 @@ jobs:
     runs-on: nas
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run golangci-lint
         uses: https://github.com/reviewdog/action-golangci-lint@v2.10
         env:

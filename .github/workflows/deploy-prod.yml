@@ -48,7 +48,7 @@ jobs:
       packages: write
     steps:
       - name: Branch Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch }}
       - name: Create .env
