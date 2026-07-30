@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"mm/service/internal/server"
 )
 
@@ -10,6 +10,6 @@ import (
 // @description Testing Swagger APIs.
 // @termsOfService http://swagger.io/terms/
 func main() {
-	fmt.Println("Starting up")
+	log.Println("Starting up")
 	server.Start("0.0.0.0:9333")
 }

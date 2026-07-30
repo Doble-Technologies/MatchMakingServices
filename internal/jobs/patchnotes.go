@@ -4,7 +4,6 @@ package jobs
 //Just will form groups based on # of players and timestamp. will essentially ignore elo rating at start
 import (
 	"context"
-	"fmt"
 	"log"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
@@ -41,10 +40,17 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 	// date
 	dateValue := e.ChildText(`[data-testid="card-date"]`)
 
-	imageURL := e.ChildAttr(`img[data-testid="mediaImage"]`, "src")
+	imageURL := e.ChildAttr(
+		`[data-testid="card-image"] img`,
+		"src",
+	)
+	description := e.ChildText(`[data-testid="rich-text-html"]`)
+	//elementHTML, _ := goquery.OuterHtml(e.DOM)
+	log.Printf("HERE: %v", description)
 
 	layout := "2006-01-02T15:04:05.000Z"
 	date, _ := time.Parse(layout, dateValue)
+
 	newsCategory := models.RiotNews{
 		Title:       title,
 		Category:    category,
@@ -52,6 +58,7 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 		Link:        baseUrl + href,
 		CreatedAt:   time.Time{},
 		ImageUrl:    imageURL,
+		Description: description,
 	}
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
 	//return []string{"Hello", "World", "!"}
@@ -68,24 +75,24 @@ func scrapeLolPatches(e *colly.HTMLElement) {
 	//Summary
 	//change detail
 
-	fmt.Printf("\n=== %s ===\n", title)
+	//log.Printf("\n=== %s ===\n", title)
 
 	// context paragraph
 	summary := strings.TrimSpace(e.ChildText("blockquote.blockquote.context p"))
 	if summary != "" {
-		fmt.Println("Context:", summary)
+		//log.Println("Context:", summary)
 	}
 
 	details := ""
 	// walk each ability / stat section
 	e.ForEach("h4.change-detail-title", func(_ int, h *colly.HTMLElement) {
 		title := strings.TrimSpace(h.Text)
-		fmt.Printf("  %s\n", title)
+		//log.Printf("  %s\n", title)
 		details += title
 
 		// the <ul> right after the h4 holds the changes
 		h.DOM.NextAllFiltered("ul").First().Find("li").Each(func(_ int, li *goquery.Selection) {
-			fmt.Printf("    - %s\n", strings.TrimSpace(li.Text()))
+			//log.Printf("    - %s\n", strings.TrimSpace(li.Text()))
 			details += li.Text()
 		})
 	})
@@ -129,7 +136,11 @@ func ScrapeRiot() error {
 
 	for _, fileURL := range validPatchNotes {
 		if err := c.Visit(fileURL); err != nil {
-			log.Fatal(err)
+			if err.Error() == "Missing URL" {
+				break
+			} else {
+				log.Fatalf("Invalid Patch Notes: %v", err)
+			}
 		}
 	}
 	//For loop of all valids urls + pass the id

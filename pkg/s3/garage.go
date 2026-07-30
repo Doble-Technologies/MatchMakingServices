@@ -2,7 +2,7 @@ package s3
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 
@@ -20,13 +20,13 @@ type debugTransport struct {
 
 func (d *debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	dump, _ := httputil.DumpRequestOut(req, false) // false = skip body
-	fmt.Printf("========== OUTGOING REQUEST ==========\n%s\n", dump)
+	log.Printf("========== OUTGOING REQUEST ==========\n%s\n", dump)
 
 	resp, err := d.wrapped.RoundTrip(req)
 
 	if resp != nil {
 		dumpResp, _ := httputil.DumpResponse(resp, true)
-		fmt.Printf("========== RESPONSE ==========\n%s\n", dumpResp)
+		log.Printf("========== RESPONSE ==========\n%s\n", dumpResp)
 	}
 	return resp, err
 }
