@@ -3,11 +3,11 @@ package handlers
 import (
 	"mm/service/internal/middleware"
 	"mm/service/internal/models"
+	"mm/service/internal/models/inputs"
 	"mm/service/pkg/initializer"
 	"net/http"
 	"net/mail"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ func validateSingleAddress(value string) error {
 }
 func Login(c *gin.Context) {
 
-	var loginInput models.LoginInput
+	var loginInput inputs.LoginInput
 
 	if err := c.ShouldBindJSON(&loginInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -77,7 +77,7 @@ func Login(c *gin.Context) {
 
 func CreateUser(c *gin.Context) {
 
-	var authInput models.AuthInput
+	var authInput inputs.AuthInput
 
 	if err := c.ShouldBindJSON(&authInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -92,12 +92,12 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	regEx := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,64}$`)
+	// regEx := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,64}$`)
 
-	if !regEx.MatchString(authInput.Password) {
-		c.JSON(http.StatusBadRequest, gin.H{"Invalid Password": ""})
-		return
-	}
+	// if !regEx.MatchString(authInput.Password) {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Invalid Password": ""})
+	// 	return
+	// }
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(authInput.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -129,7 +129,7 @@ func CreateUser(c *gin.Context) {
 	userData := models.UserDetail{
 		UserID: user.ID,
 		Xp:     0,
-		Avatar: "",
+		Avatar: "images/1780015344232921334_square-pug.jpg", //Default Pug Avatar
 		Bio:    "",
 	}
 	initializer.DB.Create(&userData)

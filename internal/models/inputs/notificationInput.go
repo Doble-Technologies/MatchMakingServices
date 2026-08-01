@@ -1,4 +1,4 @@
-package models
+package inputs
 
 type NotificationInput struct {
 	UserID string `gorm:"type:bigint;not null" json:"user_id"`

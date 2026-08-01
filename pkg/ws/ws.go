@@ -37,7 +37,7 @@ func _(conn *websocket.Conn, rdb *redis.Client) {
 			log.Println(err)
 			return
 		}
-		fmt.Println(string(p))
+		log.Println(string(p))
 		err = conn.WriteMessage(messageType, p)
 		if err != nil {
 			return

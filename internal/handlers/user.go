@@ -4,23 +4,67 @@ import (
 	"fmt"
 	"log"
 	"mm/service/internal/models"
+	"mm/service/internal/models/inputs"
+	"mm/service/internal/models/views"
 	"mm/service/pkg/initializer"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetUserProfile(c *gin.Context) {
+func GetUserProfile(c *gin.Context, h *ImageUploadHandler) {
+	var userProfile views.UserProfile
+	userInterface, exists := c.Get("currentUser")
+	if !exists {
+		c.JSON(401, gin.H{"error": "user not found in context"})
+		return
+	}
+	user, _ := userInterface.(models.User)
 
-	user, _ := c.Get("currentUser")
+	log.Printf("%v", user.ID)
+	result := initializer.DB.Table("user_details ud").
+		Select("u.id, u.username, ud.xp, ud.avatar, ud.bio, u.email, u.created_at").
+		Where("? = u.id", user.ID).
+		Joins("JOIN users u ON u.id = ud.user_id").
+		Scan(&userProfile)
+	if result.Error != nil {
+		log.Printf("%v", result)
+		c.JSON(500, gin.H{"error": "user error"})
+		return
+	}
 
+	userProfile.Avatar = GenerateUrl(userProfile.Avatar, c, h)
 	c.JSON(200, gin.H{
-		"user": user,
+		"profile": userProfile,
 	})
 }
 
-func GetFriendsListById(c *gin.Context) {
+func GetUserProfileByUser(c *gin.Context, h *ImageUploadHandler) {
+	var userProfile views.UserProfile
+	var username = c.Param("username")
+	result := initializer.DB.Table("user_details ud").
+		Select("ud.user_id, u.username, ud.xp, ud.avatar, ud.bio, u.email, u.created_at").
+		Where("? = u.username", username).
+		Joins("JOIN users u ON u.id = ud.user_id").
+		Scan(&userProfile)
+	if result.Error != nil {
+		log.Printf("%v", result)
+		c.JSON(500, gin.H{"error": "user error"})
+		return
+	}
+	if userProfile.UserID == 0 {
+		c.JSON(404, gin.H{"error": "user not found"})
+		return
+	}
 
+	userProfile.Avatar = GenerateUrl(userProfile.Avatar, c, h)
+	c.JSON(200, gin.H{
+		"profile": userProfile,
+	})
+
+}
+
+func GetFriendsListById(c *gin.Context) {
 	var id = c.Param("id")
 	var friendsList []models.Friend
 
@@ -86,7 +130,7 @@ func DeleteFriend(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 func CreateFriend(c *gin.Context) {
-	var friend models.FriendInput
+	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return
@@ -105,7 +149,7 @@ func CreateFriend(c *gin.Context) {
 }
 
 func EditFriend(c *gin.Context) {
-	var friend models.FriendInput
+	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return
@@ -133,6 +177,11 @@ func GetNotificationsByID(c *gin.Context) {
 	var notifications []models.Notification
 	var id = c.Param("id")
 
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"err": "missing id"})
+		return
+	}
+
 	initializer.DB.Where("user_id=?", id).Find(&notifications)
 
 	c.JSON(200, gin.H{
@@ -148,7 +197,7 @@ func GetNotificationsByID(c *gin.Context) {
 // @Router /generate/CreateNotifications [post]
 func CreateNotifications(c *gin.Context) {
 	//Notification Inputs
-	var notInputs []models.NotificationInput
+	var notInputs []inputs.NotificationInput
 	if err := c.ShouldBindJSON(&notInputs); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"invalid format": err.Error()})
 		return

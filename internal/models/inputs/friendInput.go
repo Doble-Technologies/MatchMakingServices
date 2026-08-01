@@ -1,4 +1,4 @@
-package models
+package inputs
 
 type FriendInput struct {
 	UserID       uint64 `gorm:"type:bigint;not null" json:"user_id"`
