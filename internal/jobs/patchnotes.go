@@ -4,6 +4,7 @@ package jobs
 //Just will form groups based on # of players and timestamp. will essentially ignore elo rating at start
 import (
 	"context"
+	"errors"
 	"log"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
@@ -14,6 +15,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -44,7 +46,9 @@ func scrapeRiotPatch(e *colly.HTMLElement) string {
 		`[data-testid="card-image"] img`,
 		"src",
 	)
-	log.Printf("%s", imageURL)
+
+	//Todo: fix
+	//log.Printf("%s", imageURL)
 
 	description := e.ChildText(`[data-testid="rich-text-html"]`)
 	//elementHTML, _ := goquery.OuterHtml(e.DOM)
@@ -111,14 +115,28 @@ func ScrapeRiot() error {
 	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`,
 		func(e *colly.HTMLElement) {
 			var tempUrl = scrapeRiotPatch(e)
-			//var result
 			var result models.RiotNews
-			initializer.DB.Where("link= ?", tempUrl).Scan(&result)
-			if result.NewsID == 0 {
-				//Check if tempUrl is valid if true then append
+			var firstPatch models.LeaguePatchNote
+			//Cant use link, got to check news id of the link..... then check if exists in the patch notes table
+			err := initializer.DB.Where("link = ?", tempUrl).First(&result).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// Record does not exist, technically impossible I think
+				//Todo: Test this path
 				validPatchNotes = append(validPatchNotes, tempUrl)
-			}
 
+			} else if err != nil {
+				// Handle database error
+				log.Printf("ERR: %v", err)
+				//If record exists it would be in else
+			} else {
+				initializer.DB.Where("news_id = ?", result.NewsID).First(&firstPatch)
+				if firstPatch.NewsID > 0 {
+					log.Printf("Existing Patch")
+				} else {
+					log.Printf("New Patch: : %v", firstPatch)
+					validPatchNotes = append(validPatchNotes, tempUrl)
+				}
+			}
 		})
 
 	//EXECUTE and return valid urls
