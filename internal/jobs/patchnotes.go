@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand/v2"
+	"mm/service/internal/constants"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
 	"os"
@@ -41,15 +43,10 @@ func scrapeRiotPatch(e *colly.HTMLElement) string {
 	category := e.ChildText(`[data-testid="card-category"]`)
 	// date
 	dateValue := e.ChildText(`[data-testid="card-date"]`)
+	//IMAGE URL IS THIS SPOT
 
-	imageURL := e.ChildAttr(
-		`[data-testid="card-image"] img`,
-		"src",
-	)
-
-	//Todo: fix
+	//Todo: fix, cant scrape from raw html
 	//log.Printf("%s", imageURL)
-
 	description := e.ChildText(`[data-testid="rich-text-html"]`)
 	//elementHTML, _ := goquery.OuterHtml(e.DOM)
 	layout := "2006-01-02T15:04:05.000Z"
@@ -61,7 +58,7 @@ func scrapeRiotPatch(e *colly.HTMLElement) string {
 		PublishedAt: date,
 		Link:        baseUrl + href,
 		CreatedAt:   time.Time{},
-		ImageUrl:    imageURL,
+		ImageUrl:    constants.TILE_IMAGES[rand.N(len(constants.TILE_IMAGES))],
 		Description: description,
 	}
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
@@ -123,7 +120,7 @@ func ScrapeRiot() error {
 				// Record does not exist, technically impossible I think
 				//Todo: Test this path
 				validPatchNotes = append(validPatchNotes, tempUrl)
-
+				log.Printf("Invalid Patch")
 			} else if err != nil {
 				// Handle database error
 				log.Printf("ERR: %v", err)
