@@ -56,7 +56,7 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 		ver1.POST("/auth/login", handlers.Login)
 		ver1.POST("/auth/refresh", middleware.CheckAuth, handlers.AuthRefresh)
 
-		ver1.GET("/user/profile", middleware.CheckAuth, func(c *gin.Context) {
+		ver1.GET("/user/profile", func(c *gin.Context) {
 			handlers.GetUserProfile(c, uploadHandler)
 		})
 
