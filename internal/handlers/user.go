@@ -13,14 +13,15 @@ import (
 )
 
 // GetUserProfile GETs a user's profile based on the current user context
-// @Summary Get User Profile by Current User Context
-// @Description Retrieves and returns the profile details of the currently logged-in user.
-// @Tags users
-// @Produce json
-// @Success 200 {object} views.UserProfile "Returns the user profile"
-// @Failure 401 {object} gin.H "User not found in context"
-// @Failure 500 {object} gin.H "Internal server error"
-// @Router /user/profile [get]
+//
+//	@Summary		Get User Profile by Current User Context
+//	@Description	Retrieves and returns the profile details of the currently logged-in user.
+//	@Tags			users
+//	@Produce		json
+//	@Success		200	{object}	views.UserProfile	"Returns the user profile"
+//	@Failure		401	{object}	gin.H				"User not found in context"
+//	@Failure		500	{object}	gin.H				"Internal server error"
+//	@Router			/user/profile [get]
 func GetUserProfile(c *gin.Context, h *ImageUploadHandler) {
 	var userProfile views.UserProfile
 	userInterface, exists := c.Get("currentUser")
@@ -49,15 +50,16 @@ func GetUserProfile(c *gin.Context, h *ImageUploadHandler) {
 }
 
 // GetUserProfileByUser GETs a user's profile by username
-// @Summary Get User Profile by Username
-// @Description Retrieves and returns the profile details of a user by their username.
-// @Tags users
-// @Produce json
-// @Param username path string true "Username"
-// @Success 200 {object} views.UserProfile "Returns the user profile"
-// @Failure 404 {object} gin.H "User not found"
-// @Failure 500 {object} gin.H "Internal server error"
-// @Router /user/profile/{username} [get]
+//
+//	@Summary		Get User Profile by Username
+//	@Description	Retrieves and returns the profile details of a user by their username.
+//	@Tags			users
+//	@Produce		json
+//	@Param			username	path		string				true	"Username"
+//	@Success		200			{object}	views.UserProfile	"Returns the user profile"
+//	@Failure		404			{object}	gin.H				"User not found"
+//	@Failure		500			{object}	gin.H				"Internal server error"
+//	@Router			/user/profile/{username} [get]
 func GetUserProfileByUser(c *gin.Context, h *ImageUploadHandler) {
 	var userProfile views.UserProfile
 	username := c.Param("username")
@@ -82,14 +84,15 @@ func GetUserProfileByUser(c *gin.Context, h *ImageUploadHandler) {
 }
 
 // GetFriendsListById GETs a user's friends list by user ID
-// @Summary Get Friends List by User ID
-// @Description Retrieves and returns the list of friends for a given user ID.
-// @Tags users
-// @Produce json
-// @Param id path string true "User ID"
-// @Success 200 {object} gin.H{friends:[]models.Friend} "Returns the list of friends"
-// @Failure 500 {object} gin.H "Internal server error"
-// @Router /user/friends/{id} [get]
+//
+//	@Summary		Get Friends List by User ID
+//	@Description	Retrieves and returns the list of friends for a given user ID.
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path		string							true	"User ID"
+//	@Success		200	{object}	gin.H{friends:[]models.Friend}	"Returns the list of friends"
+//	@Failure		500	{object}	gin.H							"Internal server error"
+//	@Router			/user/friends/{id} [get]
 func GetFriendsListById(c *gin.Context) {
 	id := c.Param("id")
 	var friendsList []models.Friend
@@ -104,14 +107,15 @@ func GetFriendsListById(c *gin.Context) {
 }
 
 // GetFriendsList GETs a user's friends list by current user context
-// @Summary Get Friends List by Current User Context
-// @Description Retrieves and returns the list of friends for the currently logged-in user.
-// @Tags users
-// @Produce json
-// @Success 200 {object} gin.H{friends:[]models.Friend} "Returns the list of friends"
-// @Failure 401 {object} gin.H "User not found in context"
-// @Failure 500 {object} gin.H "Invalid user type"
-// @Router /user/friends [get]
+//
+//	@Summary		Get Friends List by Current User Context
+//	@Description	Retrieves and returns the list of friends for the currently logged-in user.
+//	@Tags			users
+//	@Produce		json
+//	@Success		200	{object}	gin.H{friends:[]models.Friend}	"Returns the list of friends"
+//	@Failure		401	{object}	gin.H							"User not found in context"
+//	@Failure		500	{object}	gin.H							"Invalid user type"
+//	@Router			/user/friends [get]
 func GetFriendsList(c *gin.Context) {
 	userInterface, exists := c.Get("currentUser")
 	if !exists {
@@ -137,15 +141,16 @@ func GetFriendsList(c *gin.Context) {
 }
 
 // DeleteFriend DELETEs a friend from the user's friend list
-// @Summary Delete Friend
-// @Description Deletes a friend relationship from the current user's friend list.
-// @Tags users
-// @Produce json
-// @Param body body inputs.FriendInput true "Friend details to delete"
-// @Success 200 {object} gin.H "Returns an empty response on success"
-// @Failure 401 {object} gin.H "Unauthorized operation"
-// @Failure 400 {object} gin.H "Invalid request format"
-// @Router /user/friends [delete]
+//
+//	@Summary		Delete Friend
+//	@Description	Deletes a friend relationship from the current user's friend list.
+//	@Tags			users
+//	@Produce		json
+//	@Param			body	body		inputs.FriendInput	true	"Friend details to delete"
+//	@Success		200		{object}	gin.H				"Returns an empty response on success"
+//	@Failure		401		{object}	gin.H				"Unauthorized operation"
+//	@Failure		400		{object}	gin.H				"Invalid request format"
+//	@Router			/user/friends [delete]
 func DeleteFriend(c *gin.Context) {
 	userInterface, exists := c.Get("currentUser")
 	if !exists {
@@ -175,14 +180,15 @@ func DeleteFriend(c *gin.Context) {
 }
 
 // CreateFriend POSTs a new friend to the user's friend list
-// @Summary Create Friend
-// @Description Creates a new friend relationship in the current user's friend list.
-// @Tags users
-// @Produce json
-// @Param body body inputs.FriendInput true "Friend details"
-// @Success 201 {object} gin.H "Returns creation result on success"
-// @Failure 400 {object} gin.H "Invalid request format"
-// @Router /user/friends [post]
+//
+//	@Summary		Create Friend
+//	@Description	Creates a new friend relationship in the current user's friend list.
+//	@Tags			users
+//	@Produce		json
+//	@Param			body	body		inputs.FriendInput	true	"Friend details"
+//	@Success		201		{object}	gin.H				"Returns creation result on success"
+//	@Failure		400		{object}	gin.H				"Invalid request format"
+//	@Router			/user/friends [post]
 func CreateFriend(c *gin.Context) {
 	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
@@ -202,14 +208,15 @@ func CreateFriend(c *gin.Context) {
 }
 
 // EditFriend PUTs an updated status for a friend in the user's friend list
-// @Summary Edit Friend Status
-// @Description Updates the status of a friend relationship in the current user's friend list.
-// @Tags users
-// @Produce json
-// @Param body body inputs.FriendInput true "Friend details with new status"
-// @Success 200 {object} gin.H "Returns updated status on success"
-// @Failure 400 {object} gin.H "Invalid request format"
-// @Router /user/friends [put]
+//
+//	@Summary		Edit Friend Status
+//	@Description	Updates the status of a friend relationship in the current user's friend list.
+//	@Tags			users
+//	@Produce		json
+//	@Param			body	body		inputs.FriendInput	true	"Friend details with new status"
+//	@Success		200		{object}	gin.H				"Returns updated status on success"
+//	@Failure		400		{object}	gin.H				"Invalid request format"
+//	@Router			/user/friends [put]
 func EditFriend(c *gin.Context) {
 	var friend inputs.FriendInput
 	if err := c.ShouldBindJSON(&friend); err != nil {
@@ -222,12 +229,13 @@ func EditFriend(c *gin.Context) {
 }
 
 // GetNotifications GETs notifications for the current user
-// @Summary Get Notifications by Current User
-// @Description Retrieves and returns the list of notifications for the currently logged-in user.
-// @Tags users
-// @Produce json
-// @Success 200 {object} gin.H{notifications:[]models.Notification} "Returns the list of notifications"
-// @Router /user/notifications [get]
+//
+//	@Summary		Get Notifications by Current User
+//	@Description	Retrieves and returns the list of notifications for the currently logged-in user.
+//	@Tags			users
+//	@Produce		json
+//	@Success		200	{object}	gin.H{notifications:[]models.Notification}	"Returns the list of notifications"
+//	@Router			/user/notifications [get]
 func GetNotifications(c *gin.Context) {
 	var notifications []models.Notification
 	userInterface, _ := c.Get("currentUser")
@@ -243,14 +251,15 @@ func GetNotifications(c *gin.Context) {
 }
 
 // GetNotificationsByID GETs notifications for a specific user by ID
-// @Summary Get Notifications by User ID
-// @Description Retrieves and returns the list of notifications for a specified user by their ID.
-// @Tags users
-// @Produce json
-// @Param id path string true "User ID"
-// @Success 200 {object} gin.H{notifications:[]models.Notification} "Returns the list of notifications"
-// @Failure 400 {object} gin.H "Missing user ID"
-// @Router /user/notifications/{id} [get]
+//
+//	@Summary		Get Notifications by User ID
+//	@Description	Retrieves and returns the list of notifications for a specified user by their ID.
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path		string										true	"User ID"
+//	@Success		200	{object}	gin.H{notifications:[]models.Notification}	"Returns the list of notifications"
+//	@Failure		400	{object}	gin.H										"Missing user ID"
+//	@Router			/user/notifications/{id} [get]
 func GetNotificationsByID(c *gin.Context) {
 	var notifications []models.Notification
 	id := c.Param("id")
@@ -268,13 +277,14 @@ func GetNotificationsByID(c *gin.Context) {
 }
 
 // CreateNotifications POSTs multiple notifications to the database
-// @Summary Create Notifications
-// @Description Ingests and inserts multiple notification records into the notifications database.
-// @Tags users
-// @Produce json
-// @Param body body []inputs.NotificationInput true "List of Notification Inputs"
-// @Success 200 {object} gin.H{notifications_sent:int,notifications_created:int} "Returns the count of sent and created notifications"
-// @Router /user/notifications [post]
+//
+//	@Summary		Create Notifications
+//	@Description	Ingests and inserts multiple notification records into the notifications database.
+//	@Tags			users
+//	@Produce		json
+//	@Param			body	body		[]inputs.NotificationInput								true	"List of Notification Inputs"
+//	@Success		200		{object}	gin.H{notifications_sent:int,notifications_created:int}	"Returns the count of sent and created notifications"
+//	@Router			/user/notifications [post]
 func CreateNotifications(c *gin.Context) {
 	var notInputs []inputs.NotificationInput
 	if err := c.ShouldBindJSON(&notInputs); err != nil {
