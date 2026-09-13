@@ -65,7 +65,6 @@ func GetFriendsListById(c *gin.Context) {
 		Where("? IN (f.user_id, f.friend_user_id)", id).
 		Where("status = 'accepted'").
 		Scan(&friendList)
-	log.Printf("%v", friendList)
 	if result.Error != nil {
 		log.Printf("Database error: %v\n", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -64,11 +64,11 @@ func NewImageUploadHandler(s3Client *s3.Client) *ImageUploadHandler {
 //	@Tags			images
 //	@Accept			mpfd
 //	@Produce		json
-//	@Param			image	formData	file					true	"Image file to upload (JPEG, PNG, WebP, or GIF; max 10 MB)"
-//	@Success		201		{object}	ImageUploadResponse		"Upload successful — presigned URL valid for 7 days"
-//	@Failure		400		{object}	ErrorResponse			"Request too large, not multipart, or missing the 'image' field"
+//	@Param			image	formData	file							true	"Image file to upload (JPEG, PNG, WebP, or GIF; max 10 MB)"
+//	@Success		201		{object}	ImageUploadResponse				"Upload successful — presigned URL valid for 7 days"
+//	@Failure		400		{object}	ErrorResponse					"Request too large, not multipart, or missing the 'image' field"
 //	@Failure		415		{object}	UnsupportedMediaTypeResponse	"MIME type not allowed"
-//	@Failure		500		{object}	ErrorResponse			"S3 upload failed or presign failed"
+//	@Failure		500		{object}	ErrorResponse					"S3 upload failed or presign failed"
 //	@Router			/upload/image [post]
 func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 	//Valid Token

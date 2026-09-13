@@ -4,7 +4,10 @@ package jobs
 //Just will form groups based on # of players and timestamp. will essentially ignore elo rating at start
 import (
 	"context"
+	"errors"
 	"log"
+	"math/rand/v2"
+	"mm/service/internal/constants"
 	"mm/service/internal/models"
 	"mm/service/pkg/initializer"
 	"os"
@@ -14,6 +17,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -29,8 +33,8 @@ func (m PatchNotesJob) Schedule() string {
 }
 
 // []string
-func scrapeRiotPatch(e *colly.HTMLElement) {
-	baseUrl := "https://www.leagueoflegends.com/"
+func scrapeRiotPatch(e *colly.HTMLElement) string {
+	baseUrl := "https://www.leagueoflegends.com"
 	// href attribute
 	href := e.Attr("href")
 	// title text
@@ -39,15 +43,12 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 	category := e.ChildText(`[data-testid="card-category"]`)
 	// date
 	dateValue := e.ChildText(`[data-testid="card-date"]`)
+	//IMAGE URL IS THIS SPOT
 
-	imageURL := e.ChildAttr(
-		`[data-testid="card-image"] img`,
-		"src",
-	)
+	//Todo: fix, cant scrape from raw html
+	//log.Printf("%s", imageURL)
 	description := e.ChildText(`[data-testid="rich-text-html"]`)
 	//elementHTML, _ := goquery.OuterHtml(e.DOM)
-	log.Printf("HERE: %v", description)
-
 	layout := "2006-01-02T15:04:05.000Z"
 	date, _ := time.Parse(layout, dateValue)
 
@@ -57,11 +58,11 @@ func scrapeRiotPatch(e *colly.HTMLElement) {
 		PublishedAt: date,
 		Link:        baseUrl + href,
 		CreatedAt:   time.Time{},
-		ImageUrl:    imageURL,
+		ImageUrl:    constants.TILE_IMAGES[rand.N(len(constants.TILE_IMAGES))],
 		Description: description,
 	}
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&newsCategory)
-	//return []string{"Hello", "World", "!"}
+	return baseUrl + href
 }
 
 func scrapeLolPatches(e *colly.HTMLElement) {
@@ -71,23 +72,13 @@ func scrapeLolPatches(e *colly.HTMLElement) {
 		return // skip non-title blocks
 	}
 
-	//Title
-	//Summary
-	//change detail
-
-	//log.Printf("\n=== %s ===\n", title)
-
 	// context paragraph
 	summary := strings.TrimSpace(e.ChildText("blockquote.blockquote.context p"))
-	if summary != "" {
-		//log.Println("Context:", summary)
-	}
 
 	details := ""
 	// walk each ability / stat section
 	e.ForEach("h4.change-detail-title", func(_ int, h *colly.HTMLElement) {
 		title := strings.TrimSpace(h.Text)
-		//log.Printf("  %s\n", title)
 		details += title
 
 		// the <ul> right after the h4 holds the changes
@@ -97,10 +88,12 @@ func scrapeLolPatches(e *colly.HTMLElement) {
 		})
 	})
 
-	//Creat dto of title, summary, and append the change detail into 1
-
+	var news models.RiotNews
+	var requestUrl = e.Request.URL.String()
+	initializer.DB.Where("link=?", requestUrl[:len(requestUrl)-1]).Find(&news)
+	//Check if patches already exist for X url
 	patchNote := models.LeaguePatchNote{
-		NewsID:       178, //Determine this
+		NewsID:       news.NewsID,
 		Title:        &title,
 		Summary:      &summary,
 		ChangeDetail: &details,
@@ -108,43 +101,62 @@ func scrapeLolPatches(e *colly.HTMLElement) {
 	//save patch note
 
 	initializer.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&patchNote)
-
 }
 
 func ScrapeRiot() error {
 	baseUrl := "https://www.leagueoflegends.com/"
 	c := initializer.SetupColly()
 
-	//Parse HTML
-	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`, scrapeRiotPatch)
-	//Fetch pending links
-	//execute new func
+	var validPatchNotes []string
+	//Scrapes all the big patch cards
+	c.OnHTML(`a[data-testid="articlefeaturedcard-component"]`,
+		func(e *colly.HTMLElement) {
+			var tempUrl = scrapeRiotPatch(e)
+			var result models.RiotNews
+			var firstPatch models.LeaguePatchNote
+			//Cant use link, got to check news id of the link..... then check if exists in the patch notes table
+			err := initializer.DB.Where("link = ?", tempUrl).First(&result).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// Record does not exist, technically impossible I think
+				//Todo: Test this path
+				validPatchNotes = append(validPatchNotes, tempUrl)
+				log.Printf("Invalid Patch")
+			} else if err != nil {
+				// Handle database error
+				log.Printf("ERR: %v", err)
+				//If record exists it would be in else
+			} else {
+				initializer.DB.Where("news_id = ?", result.NewsID).First(&firstPatch)
+				if firstPatch.NewsID > 0 {
+					log.Printf("Existing Patch")
+				} else {
+					log.Printf("New Patch: : %v", firstPatch)
+					validPatchNotes = append(validPatchNotes, tempUrl)
+				}
+			}
+		})
 
 	//EXECUTE and return valid urls
 	grabErr := c.Visit(baseUrl + "en-us/news/tags/patch-notes/")
-
 	if grabErr != nil {
 		return grabErr
 	}
 
-	c.OnHTML("div#patch-notes-container div.patch-change-block", func(e *colly.HTMLElement) {
-		//pass urlList
-		scrapeLolPatches(e)
-	})
+	//Separate below into a separate function-- ABOVE IS JUST THE BIG PATCH INFO
+	//This scrapes the actual patch change info, like zed q buff
 
-	var validPatchNotes = [128]string{"https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-13-notes/"}
-
+	c.OnHTML("div#patch-notes-container div.patch-change-block", scrapeLolPatches)
 	for _, fileURL := range validPatchNotes {
 		if err := c.Visit(fileURL); err != nil {
 			if err.Error() == "Missing URL" {
+				break
+			} else if err.Error() == "URL already visited" {
 				break
 			} else {
 				log.Fatalf("Invalid Patch Notes: %v", err)
 			}
 		}
 	}
-	//For loop of all valids urls + pass the id
-
 	return nil
 }
 
