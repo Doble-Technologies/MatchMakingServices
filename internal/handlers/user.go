@@ -269,6 +269,11 @@ func GetNotificationsByID(c *gin.Context) {
 		return
 	}
 
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"err": "missing id"})
+		return
+	}
+
 	initializer.DB.Where("user_id=?", id).Find(&notifications)
 
 	c.JSON(200, gin.H{
