@@ -1,3 +1,122 @@
+basePath: /api
+definitions:
+  handlers.ErrorResponse:
+    properties:
+      error:
+        example: missing 'image' field
+        type: string
+    type: object
+  handlers.ImageUploadResponse:
+    properties:
+      key:
+        example: images/1234567890_photo.jpg
+        type: string
+      url:
+        example: https://s3.example.com/matchmaking/images/1234567890_photo.jpg?X-Amz-Signature=...
+        type: string
+    type: object
+  handlers.UnsupportedMediaTypeResponse:
+    properties:
+      allowed:
+        example:
+        - image/jpeg
+        - image/png
+        - image/webp
+        - image/gif
+        items:
+          type: string
+        type: array
+      error:
+        example: unsupported image type
+        type: string
+    type: object
+  inputs.AuthInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  inputs.FriendInput:
+    properties:
+      friend_user_id:
+        type: integer
+      status:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  inputs.LoginInput:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  inputs.NotificationInput:
+    properties:
+      icon:
+        type: string
+      title:
+        type: string
+      unread:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.Friend:
+    properties:
+      created_at:
+        type: string
+      friend_user_id:
+        type: integer
+      status:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.Notification:
+    properties:
+      created_at:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      unread:
+        type: string
+      user_id:
+        type: string
+    type: object
+  views.UserProfile:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      user_id:
+        type: integer
+      username:
+        type: string
+      xp:
+        type: integer
+    type: object
+host: localhost:9333
 info:
   contact: {}
   description: Testing Swagger APIs.
@@ -5,18 +124,451 @@ info:
   title: Matchmaking Service
   version: "0.2"
 paths:
-  /CreateNotifications:
+  /:
+    get:
+      description: Returns the service health status.
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Alive and Thriving
+          schema:
+            type: string
+      summary: Health check
+      tags:
+      - system
+  /auth/login:
     post:
-      description: Ingest X Number of Notifications and insert them to notifications
-        db
+      consumes:
+      - application/json
+      description: Authenticate a user with their username and password and return
+        a signed JWT.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inputs.LoginInput'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Authentication successful
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Create and store notifications
+        "400":
+          description: Invalid request or credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      description: Refresh the current authenticated user's session using the refresh
+        token cookie or header.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized or invalid refresh token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh token
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user and create their default profile record.
+      parameters:
+      - description: User signup payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inputs.AuthInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User created successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Validation or duplicate user error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create user
+      tags:
+      - auth
+  /friends/:
+    get:
+      description: Retrieves and returns the list of friends for the currently logged-in
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the list of friends
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Friend'
+              type: array
+            type: object
+        "401":
+          description: User not found in context
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Invalid user type
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Friends List by Current User Context
+      tags:
+      - users
+  /friends/{id}:
+    get:
+      description: Retrieves and returns the list of friends for a given user ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the list of friends
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Friend'
+              type: array
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Friends List by User ID
+      tags:
+      - users
+  /friends/delete/:
+    post:
+      description: Deletes a friend relationship from the current user's friend list.
+      parameters:
+      - description: Friend details to delete
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inputs.FriendInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns an empty response on success
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized operation
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete Friend
+      tags:
+      - users
+  /friends/status/:
+    put:
+      description: Updates the status of a friend relationship in the current user's
+        friend list.
+      parameters:
+      - description: Friend details with new status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inputs.FriendInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns updated status on success
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Edit Friend Status
+      tags:
+      - users
+  /generate/friend/:
+    post:
+      description: Creates a new friend relationship in the current user's friend
+        list.
+      parameters:
+      - description: Friend details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inputs.FriendInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Returns creation result on success
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create Friend
+      tags:
+      - users
+  /generate/notifications:
+    post:
+      description: Ingests and inserts multiple notification records into the notifications
+        database.
+      parameters:
+      - description: List of Notification Inputs
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/inputs.NotificationInput'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the count of sent and created notifications
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      summary: Create Notifications
+      tags:
+      - users
+  /user/notifications:
+    get:
+      description: Retrieves and returns the list of notifications for the currently
+        logged-in user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the list of notifications
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Notification'
+              type: array
+            type: object
+      summary: Get Notifications by Current User
+      tags:
+      - users
+  /user/notificationsbyid/{id}:
+    get:
+      description: Retrieves and returns the list of notifications for a specified
+        user by their ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the list of notifications
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Notification'
+              type: array
+            type: object
+        "400":
+          description: Missing user ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get Notifications by User ID
+      tags:
+      - users
+  /user/profile:
+    get:
+      description: Retrieves and returns the profile details of the currently logged-in
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the user profile
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/views.UserProfile'
+            type: object
+        "401":
+          description: User not found in context
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get User Profile by Current User Context
+      tags:
+      - users
+  /user/profile/{username}:
+    get:
+      description: Retrieves and returns the profile details of a user by their username.
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the user profile
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/views.UserProfile'
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get User Profile by Username
+      tags:
+      - users
+  /users/avatar/fetch:
+    get:
+      description: |-
+        Given an existing S3 object key, generates and returns a 7-day presigned
+        GET URL for the corresponding object in the "matchmaking" bucket.
+      parameters:
+      - description: S3 object key
+        example: images/1234567890_photo.jpg
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Presigned URL generated successfully
+          schema:
+            $ref: '#/definitions/handlers.ImageUploadResponse'
+        "400":
+          description: Missing key query parameter
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Failed to generate presigned URL
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get a presigned image URL
+      tags:
+      - images
+  /users/avatar/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Accepts a multipart/form-data request containing a single image file,
+        validates its MIME type, stores it in the "matchmaking" S3 bucket under
+        the images/ prefix, and returns a 7-day presigned GET URL.
+      parameters:
+      - description: Image file to upload (JPEG, PNG, WebP, or GIF; max 10 MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Upload successful — presigned URL valid for 7 days
+          schema:
+            $ref: '#/definitions/handlers.ImageUploadResponse'
+        "400":
+          description: Request too large, not multipart, or missing the 'image' field
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "415":
+          description: MIME type not allowed
+          schema:
+            $ref: '#/definitions/handlers.UnsupportedMediaTypeResponse'
+        "500":
+          description: S3 upload failed or presign failed
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Upload an image
+      tags:
+      - images
 swagger: "2.0"

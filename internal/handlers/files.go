@@ -69,7 +69,8 @@ func NewImageUploadHandler(s3Client *s3.Client) *ImageUploadHandler {
 //	@Failure		400		{object}	ErrorResponse					"Request too large, not multipart, or missing the 'image' field"
 //	@Failure		415		{object}	UnsupportedMediaTypeResponse	"MIME type not allowed"
 //	@Failure		500		{object}	ErrorResponse					"S3 upload failed or presign failed"
-//	@Router			/upload/image [post]
+//
+// @Router       /users/avatar/upload [post]
 func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 	//Valid Token
 	userInterface, exists := c.Get("currentUser")
@@ -159,7 +160,8 @@ func (h *ImageUploadHandler) UploadImage(c *gin.Context) {
 //	@Success		201	{object}	ImageUploadResponse	"Presigned URL generated successfully"
 //	@Failure		400	{object}	ErrorResponse		"Missing key query parameter"
 //	@Failure		500	{object}	ErrorResponse		"Failed to generate presigned URL"
-//	@Router			/images/url [get]
+//
+// @Router       /users/avatar/fetch [get]
 func (h *ImageUploadHandler) GetImageURL(c *gin.Context) {
 	key := c.Query("key")
 	if key == "" {

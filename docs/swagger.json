@@ -8,16 +8,62 @@
         "version": "0.2"
     },
     "paths": {
-        "/CreateNotifications": {
+        "/": {
+            "get": {
+                "description": "Returns the service health status.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Alive and Thriving",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
             "post": {
-                "description": "Ingest X Number of Notifications and insert them to notifications db",
+                "description": "Authenticate a user with their username and password and return a signed JWT.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Create and store notifications",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inputs.LoginInput"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Authentication successful",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or credentials",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -25,6 +71,776 @@
                             }
                         }
                     }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Refresh the current authenticated user's session using the refresh token cookie or header.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh token",
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized or invalid refresh token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signup": {
+            "post": {
+                "description": "Register a new user and create their default profile record.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Create user",
+                "parameters": [
+                    {
+                        "description": "User signup payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inputs.AuthInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation or duplicate user error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/": {
+            "get": {
+                "description": "Retrieves and returns the list of friends for the currently logged-in user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get Friends List by Current User Context",
+                "responses": {
+                    "200": {
+                        "description": "Returns the list of friends",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Friend"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "User not found in context",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid user type",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/delete/": {
+            "post": {
+                "description": "Deletes a friend relationship from the current user's friend list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete Friend",
+                "parameters": [
+                    {
+                        "description": "Friend details to delete",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inputs.FriendInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns an empty response on success",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized operation",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/status/": {
+            "put": {
+                "description": "Updates the status of a friend relationship in the current user's friend list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Edit Friend Status",
+                "parameters": [
+                    {
+                        "description": "Friend details with new status",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inputs.FriendInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns updated status on success",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/{id}": {
+            "get": {
+                "description": "Retrieves and returns the list of friends for a given user ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get Friends List by User ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the list of friends",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Friend"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/generate/friend/": {
+            "post": {
+                "description": "Creates a new friend relationship in the current user's friend list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create Friend",
+                "parameters": [
+                    {
+                        "description": "Friend details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inputs.FriendInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Returns creation result on success",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/generate/notifications": {
+            "post": {
+                "description": "Ingests and inserts multiple notification records into the notifications database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create Notifications",
+                "parameters": [
+                    {
+                        "description": "List of Notification Inputs",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inputs.NotificationInput"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the count of sent and created notifications",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/notifications": {
+            "get": {
+                "description": "Retrieves and returns the list of notifications for the currently logged-in user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get Notifications by Current User",
+                "responses": {
+                    "200": {
+                        "description": "Returns the list of notifications",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Notification"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/notificationsbyid/{id}": {
+            "get": {
+                "description": "Retrieves and returns the list of notifications for a specified user by their ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get Notifications by User ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the list of notifications",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Notification"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/profile": {
+            "get": {
+                "description": "Retrieves and returns the profile details of the currently logged-in user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get User Profile by Current User Context",
+                "responses": {
+                    "200": {
+                        "description": "Returns the user profile",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/views.UserProfile"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "User not found in context",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/profile/{username}": {
+            "get": {
+                "description": "Retrieves and returns the profile details of a user by their username.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get User Profile by Username",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the user profile",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/views.UserProfile"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/avatar/fetch": {
+            "get": {
+                "description": "Given an existing S3 object key, generates and returns a 7-day presigned\nGET URL for the corresponding object in the \"matchmaking\" bucket.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Get a presigned image URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "images/1234567890_photo.jpg",
+                        "description": "S3 object key",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Presigned URL generated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ImageUploadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing key query parameter",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to generate presigned URL",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/avatar/upload": {
+            "post": {
+                "description": "Accepts a multipart/form-data request containing a single image file,\nvalidates its MIME type, stores it in the \"matchmaking\" S3 bucket under\nthe images/ prefix, and returns a 7-day presigned GET URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "images"
+                ],
+                "summary": "Upload an image",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file to upload (JPEG, PNG, WebP, or GIF; max 10 MB)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Upload successful — presigned URL valid for 7 days",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ImageUploadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Request too large, not multipart, or missing the 'image' field",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "415": {
+                        "description": "MIME type not allowed",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UnsupportedMediaTypeResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "S3 upload failed or presign failed",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "missing 'image' field"
+                }
+            }
+        },
+        "handlers.ImageUploadResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "images/1234567890_photo.jpg"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://s3.example.com/matchmaking/images/1234567890_photo.jpg?X-Amz-Signature=..."
+                }
+            }
+        },
+        "handlers.UnsupportedMediaTypeResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp",
+                        "image/gif"
+                    ]
+                },
+                "error": {
+                    "type": "string",
+                    "example": "unsupported image type"
+                }
+            }
+        },
+        "inputs.AuthInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "inputs.FriendInput": {
+            "type": "object",
+            "properties": {
+                "friend_user_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "inputs.LoginInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "inputs.NotificationInput": {
+            "type": "object",
+            "properties": {
+                "icon": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "unread": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Friend": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "friend_user_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "unread": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "views.UserProfile": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "xp": {
+                    "type": "integer"
                 }
             }
         }

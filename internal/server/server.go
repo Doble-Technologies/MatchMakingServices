@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerfiles "github.com/swaggo/files"
 )
 
 func init() {
@@ -95,14 +97,14 @@ func setupRoutes(r *gin.Engine, app *app.App) {
 
 		ver1.POST("/users/avatar/upload", middleware.CheckAuth, uploadHandler.UploadImage)
 		ver1.GET("/users/avatar/fetch", uploadHandler.GetImageURL)
+		//Dont commit
+		ver1.GET("/test/patch", handlers.TestPatchNotes)
 		//Patchnotes
 		ver1.GET("/view/latest/patchnotes", view.GetPatchNotes)
 		ver1.GET("/view/latest/patches", view.GetRiotNews)
 
 	}
-	//
-	//TODO: Finish Swagger Setup
-	//r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 }
 
 func Start(addr string) {

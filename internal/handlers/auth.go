@@ -19,6 +19,18 @@ func validateSingleAddress(value string) error {
 	_, err := mail.ParseAddress(value)
 	return err
 }
+
+// Login authenticates a user and issues a JWT token.
+//
+// @Summary      Login
+// @Description  Authenticate a user with their username and password and return a signed JWT.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body inputs.LoginInput true "Login credentials"
+// @Success      200 {object} map[string]string "Authentication successful"
+// @Failure      400 {object} map[string]string "Invalid request or credentials"
+// @Router       /auth/login [post]
 func Login(c *gin.Context) {
 
 	var loginInput inputs.LoginInput
@@ -75,6 +87,17 @@ func Login(c *gin.Context) {
 	})
 }
 
+// CreateUser registers a new user account.
+//
+// @Summary      Create user
+// @Description  Register a new user and create their default profile record.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body inputs.AuthInput true "User signup payload"
+// @Success      200 {object} map[string]string "User created successfully"
+// @Failure      400 {object} map[string]string "Validation or duplicate user error"
+// @Router       /auth/signup [post]
 func CreateUser(c *gin.Context) {
 
 	var authInput inputs.AuthInput
@@ -138,10 +161,27 @@ func CreateUser(c *gin.Context) {
 
 }
 
+// AuthRefresh refreshes a valid user session.
+//
+// @Summary      Refresh token
+// @Description  Refresh the current authenticated user's session using the refresh token cookie or header.
+// @Tags         auth
+// @Produce      json
+// @Success      200 {object} map[string]string "Token refreshed successfully"
+// @Failure      401 {object} map[string]string "Unauthorized or invalid refresh token"
+// @Router       /auth/refresh [post]
 func AuthRefresh(c *gin.Context) {
 	middleware.CheckRefresh(c)
 }
 
+// HealthCheck returns the status endpoint for the service.
+//
+// @Summary      Health check
+// @Description  Returns the service health status.
+// @Tags         system
+// @Produce      plain
+// @Success      200 {string} string "Alive and Thriving"
+// @Router       / [get]
 func HealthCheck(c *gin.Context) {
 	c.String(http.StatusOK, "Alive and Thriving")
 }
