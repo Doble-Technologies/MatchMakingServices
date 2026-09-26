@@ -36,12 +36,13 @@ func SetupColly() *colly.Collector {
 		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
 		r.Headers.Set("Accept", "text/html,application/xhtml+xml")
 	})
-	c.OnRequest(func(r *colly.Request) {
-		log.Printf("Scraping: %s", r.URL)
-	})
-	c.OnResponse(func(r *colly.Response) {
-		log.Printf("Status: %v", r.StatusCode)
-	})
+	// Keep for later if needed for debugging
+	//c.OnRequest(func(r *colly.Request) {
+	//	log.Printf("Scraping: %s", r.URL)
+	//})
+	//c.OnResponse(func(r *colly.Response) {
+	//	log.Printf("Status: %v", r.StatusCode)
+	//})
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
