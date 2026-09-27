@@ -1,6 +1,6 @@
 module mm/service
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
@@ -19,7 +19,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.53.0
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.16.0
 	gorm.io/driver/postgres v1.6.3
 	gorm.io/gorm v1.31.2
 )
