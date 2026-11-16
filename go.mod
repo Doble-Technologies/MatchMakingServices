@@ -1,9 +1,9 @@
 module mm/service
 
-go 1.25.0
+go 1.26.0
 
 require (
-	github.com/PuerkitoBio/goquery v1.12.0
+	github.com/PuerkitoBio/goquery v1.14.0
 	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/aws/aws-sdk-go-v2/config v1.32.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.16
@@ -18,7 +18,7 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/swaggo/swag v1.16.6
-	golang.org/x/crypto v0.53.0
+	golang.org/x/crypto v0.58.0
 	golang.org/x/time v0.15.0
 	gorm.io/driver/postgres v1.6.3
 	gorm.io/gorm v1.31.2
@@ -26,7 +26,7 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/andybalholm/cascadia v1.3.4 // indirect
+	github.com/andybalholm/cascadia v1.3.5 // indirect
 	github.com/antchfx/htmlquery v1.3.6 // indirect
 	github.com/antchfx/xmlquery v1.5.1 // indirect
 	github.com/antchfx/xpath v1.3.6 // indirect
@@ -103,12 +103,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
